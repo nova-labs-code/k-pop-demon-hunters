@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>25k YouTube-Style Audio Visualizer</title>
+<title>25k Full-Circle YouTube-Style Audio Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -18,15 +18,19 @@ canvas { display:block; }
 <canvas id="canvas"></canvas>
 <script>
 const canvas=document.getElementById("canvas"), ctx=canvas.getContext("2d");
-function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+
+function resizeCanvas(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+}
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 let centerX=canvas.width/2, centerY=canvas.height/2;
-let logoRadius=Math.min(canvas.width,canvas.height)*0.06*2;
+let logoRadius=Math.min(canvas.width,canvas.height)*0.12; // doubled
 window.addEventListener('resize', ()=>{
     centerX=canvas.width/2; centerY=canvas.height/2;
-    logoRadius=Math.min(canvas.width,canvas.height)*0.06*2;
+    logoRadius=Math.min(canvas.width,canvas.height)*0.12;
 });
 
 const startText=document.getElementById("startText");
@@ -34,7 +38,7 @@ const audio=document.getElementById("player");
 
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 const analyser=audioCtx.createAnalyser();
-analyser.fftSize=65536;
+analyser.fftSize=65536; // high resolution for 25k bars
 const source=audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -62,62 +66,69 @@ function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(M
 
 // Start
 startText.addEventListener("click", ()=>{
-    audioCtx.resume().then(()=>{ startText.style.display="none"; document.body.style.cursor="none"; playNextTrack(); });
+    audioCtx.resume().then(()=>{
+        startText.style.display="none";
+        document.body.style.cursor="none";
+        playNextTrack();
+    });
 });
 
 // Logo
 const logo=new Image();
 logo.src="https://bvp.neocities.org/roblox%20pfp.png";
 
-// Draw
+// Draw loop
 function draw(){
-  requestAnimationFrame(draw);
-  analyser.getByteFrequencyData(dataArray);
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
 
-  // Smooth / decay
-  for(let i=0;i<bufferLength;i++){
-    smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
-  }
+    // smoothing/decay
+    for(let i=0;i<bufferLength;i++){
+        smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
+    }
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const bars=25000;
-  const hueShift=Date.now()*0.02;
+    const bars=25000;
+    const hueShift=Date.now()*0.02;
 
-  for(let i=0;i<bars;i++){
-    // logarithmic mapping
-    const logIndex=Math.floor(Math.pow(i/bars,0.5)*bufferLength);
-    const value=smoothArray[logIndex]||0;
-    const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
+    for(let i=0;i<bars;i++){
+        // logarithmic mapping for YouTube-style spread
+        const logIndex=Math.floor(Math.pow(i/bars,0.5)*bufferLength);
+        const value=smoothArray[logIndex]||0;
+        const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
 
-    let baseAngle=(i/bars)*Math.PI*2;
-    const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.05;
-    const angle=baseAngle+waveOffset;
-    const barLength=Math.max(2,spike);
+        // base angle and sine wobble
+        let baseAngle=(i/bars)*Math.PI*2;
+        const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.05;
+        const angle=baseAngle+waveOffset;
+        const barLength=Math.max(2,spike);
 
-    const x1=centerX+Math.cos(angle)*logoRadius;
-    const y1=centerY+Math.sin(angle)*logoRadius;
-    const x2=centerX+Math.cos(angle)*(logoRadius+barLength);
-    const y2=centerY+Math.sin(angle)*(logoRadius+barLength);
+        const x1=centerX+Math.cos(angle)*logoRadius;
+        const y1=centerY+Math.sin(angle)*logoRadius;
+        const x2=centerX+Math.cos(angle)*(logoRadius+barLength);
+        const y2=centerY+Math.sin(angle)*(logoRadius+barLength);
 
-    const hue=(i*360/bars+hueShift)%360;
-    ctx.strokeStyle=`hsl(${hue},100%,50%)`;
-    ctx.lineWidth=0.3;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-  }
+        // color gradient
+        const hue=(i*360/bars+hueShift)%360;
+        ctx.strokeStyle=`hsl(${hue},100%,50%)`;
+        ctx.lineWidth=0.3;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(x2,y2);
+        ctx.stroke();
+    }
 
-  if(logo.complete){
-    const size=logoRadius*2;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
-    ctx.clip();
-    ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
-    ctx.restore();
-  }
+    // draw logo masked
+    if(logo.complete){
+        const size=logoRadius*2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
+        ctx.restore();
+    }
 }
 
 draw();
