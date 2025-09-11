@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio Visualizer</title>
+<style>
+html, body {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:black;
+  cursor:none;
+}
+canvas { display:block; }
+</style>
+</head>
+<body>
+
+<audio id="player"></audio>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const audio = document.getElementById("player");
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const source = audioCtx.createMediaElementSource(audio);
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 1024;
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
+
+// Particle system
+const particles = [];
+for(let i=0;i<250;i++){
+  particles.push({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    vx: (Math.random()-0.5)*2,
+    vy: (Math.random()-0.5)*2,
+    size: Math.random()*3+1,
+    color: `hsl(${Math.random()*360},100%,50%)`
+  });
+}
+
+// --- Tracks sequentially from song1 to song50 ---
+const maxTracks = 50;
+let tracks = [];
+for(let i=1;i<=maxTracks;i++){
+    tracks.push(`https://dev-bvp.github.io/kpop-demon-hunters/song${i}.mp3`);
+}
+
+let currentTrack = 0;
+
+function playNextTrack(){
+    if(tracks.length===0) return;
+    if(currentTrack >= tracks.length) currentTrack = 0;
+    audio.src = tracks[currentTrack];
+    audio.play();
+    currentTrack++;
+}
+
+audio.addEventListener("ended", playNextTrack);
+
+// Click to start
+canvas.addEventListener("click", ()=>{
+    if(audioCtx.state === "suspended") audioCtx.resume();
+    playNextTrack();
+});
+
+// --- Draw loop ---
+function draw(){
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+
+    // Fade for trail effect
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Draw frequency bars rising from bottom
+    const barWidth = canvas.width / bufferLength * 2;
+    let x = 0;
+    for(let i = 0; i < bufferLength; i++){
+        const barHeight = dataArray[i]*1.5;
+        const r = barHeight + 50;
+        const g = 255 - barHeight;
+        const b = i * 2;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+
+        // Bottom-up bars
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+    }
+
+    // Draw particles reacting to bass
+    const bass = dataArray.slice(0,20).reduce((a,b)=>a+b,0)/20;
+    particles.forEach(p=>{
+        p.x += p.vx + (Math.random()-0.5)*0.5;
+        p.y += p.vy + (Math.random()-0.5)*0.5;
+        if(p.x>canvas.width) p.x=0;
+        if(p.x<0) p.x=canvas.width;
+        if(p.y>canvas.height) p.y=0;
+        if(p.y<0) p.y=canvas.height;
+        const size = p.size + bass*0.05; // particles react to bass
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,size,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+draw();
+
+// Handle window resize
+window.addEventListener("resize", ()=>{
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
