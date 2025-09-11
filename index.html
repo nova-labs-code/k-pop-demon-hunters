@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>8000-Bar Circle Visualizer with Spikes</title>
+<title>Responsive Full-Circle Spiky Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -29,13 +29,18 @@ canvas { display:block; }
 <body>
 <div id="startText">Click to Start</div>
 <audio id="player" type="audio/mpeg"></audio>
-<canvas id="canvas" width="1920" height="1080"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = 1920;
-canvas.height = 1080;
+
+function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
@@ -43,7 +48,7 @@ const audio = document.getElementById("player");
 // Audio setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768; // high resolution for 8000 bars
+analyser.fftSize = 32768; // high resolution
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -69,7 +74,7 @@ function playNextTrack(){
 }
 audio.addEventListener("ended", playNextTrack);
 
-// Shuffle function
+// Fisher–Yates shuffle
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -97,21 +102,22 @@ function draw(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const centerX = canvas.width/2;
-  const centerY = canvas.height/2;
-  const logoRadius = 120;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const logoRadius = Math.min(canvas.width, canvas.height) * 0.06; // scales with screen
   const bars = 8000;
   const step = Math.floor(bufferLength / bars);
   const hueShift = Date.now() * 0.02;
 
+  // Full-circle spikes
   for(let i=0;i<bars;i++){
     const value = dataArray[i*step] || 0;
 
-    // apply spike effect: amplify highs
-    const spike = Math.pow(value/255, 2) * 250; // dynamic spike
+    // spike scaling: more dramatic peaks
+    const spike = Math.pow(value/255, 2) * Math.min(canvas.width, canvas.height) * 0.125;
 
     const angle = (i / bars) * Math.PI * 2;
-    const barLength = Math.max(10, spike);
+    const barLength = Math.max(5, spike);
 
     const x1 = centerX + Math.cos(angle) * logoRadius;
     const y1 = centerY + Math.sin(angle) * logoRadius;
@@ -127,7 +133,7 @@ function draw(){
     ctx.stroke();
   }
 
-  // Draw logo at center
+  // Draw centered logo
   if(logo.complete){
     const size = logoRadius * 2;
     ctx.save();
