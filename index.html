@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Responsive Half-Circle Wavy Visualizer</title>
+<title>15k Full-Circle Wavy Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -111,7 +111,7 @@ function draw(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const bars = 8000;
+  const bars = 15000; // now 15k
   const step = Math.floor(bufferLength / bars);
   const hueShift = Date.now() * 0.02;
 
@@ -119,12 +119,14 @@ function draw(){
     const value = dataArray[i*step] || 0;
     const spike = Math.pow(value/255, 2) * Math.min(canvas.width, canvas.height) * 0.125;
 
-    // half-circle right side (0 to PI) with wave
-    let baseAngle = (i / bars) * Math.PI;
-    const waveOffset = Math.sin(Date.now()*0.002 + i*0.01) * 0.05;
+    // Full circle angle
+    let baseAngle = (i / bars) * Math.PI * 2;
+
+    // wave offset so spikes move from right half to left half
+    const waveOffset = Math.sin(Date.now()*0.002 + i*0.005) * 0.2;
     const angle = baseAngle + waveOffset;
 
-    const barLength = Math.max(5, spike);
+    const barLength = Math.max(3, spike);
 
     const x1 = centerX + Math.cos(angle) * logoRadius;
     const y1 = centerY + Math.sin(angle) * logoRadius;
@@ -133,7 +135,7 @@ function draw(){
 
     const hue = (i * 360 / bars + hueShift) % 360;
     ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 0.7;
+    ctx.lineWidth = 0.4; // thinner for 15k bars
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
