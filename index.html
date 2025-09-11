@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Beat Visualizer</title>
+<title>Advanced Beat Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -43,7 +43,7 @@ const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 1024;
+analyser.fftSize = 2048; // higher resolution
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -71,12 +71,11 @@ function playNextTrack(){
 startText.addEventListener("click", ()=>{
     audioCtx.resume().then(()=>{
         startText.style.display = "none";
-        document.body.style.cursor = "none"; // <-- hides the mouse
+        document.body.style.cursor = "none"; // hide cursor
         playNextTrack();
     });
 });
 
-// Automatically play next track when one ends
 audio.addEventListener("ended", playNextTrack);
 
 // --- Draw loop ---
@@ -85,17 +84,29 @@ function draw(){
     analyser.getByteFrequencyData(dataArray);
 
     // Fade for trail effect
-    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Draw bars from bottom up, reacting to beat/bass
     const barWidth = canvas.width / bufferLength * 2;
     let x = 0;
-    for(let i = 0; i < bufferLength; i++){
-        const multiplier = (i < 30) ? 3.5 : 1.5;
-        const barHeight = dataArray[i]*multiplier;
 
-        ctx.fillStyle = `hsl(${i*2},100%,50%)`;
+    // Calculate volume levels for bass/mid/treble
+    const bass = dataArray.slice(0,20).reduce((a,b)=>a+b,0)/20;
+    const mid = dataArray.slice(20,100).reduce((a,b)=>a+b,0)/80;
+    const treble = dataArray.slice(100,bufferLength).reduce((a,b)=>a+b,0)/(bufferLength-100);
+
+    for(let i = 0; i < bufferLength; i++){
+        // Base multiplier based on frequency band
+        let multiplier;
+        if(i < 20) multiplier = 4 + bass/30;       // Bass
+        else if(i < 100) multiplier = 2 + mid/60;  // Mid
+        else multiplier = 1 + treble/80;           // Treble/Highs
+
+        const barHeight = dataArray[i] * multiplier;
+
+        // Color dynamically by frequency + amplitude
+        const hue = (i*2 + barHeight*0.5) % 360;
+        ctx.fillStyle = `hsl(${hue},100%,50%)`;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
         x += barWidth + 1;
