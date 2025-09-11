@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>15k Three-Part Audio Visualizer</title>
+<title>25k YouTube-Style Audio Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -34,13 +34,14 @@ const audio=document.getElementById("player");
 
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 const analyser=audioCtx.createAnalyser();
-analyser.fftSize=32768;
+analyser.fftSize=65536;
 const source=audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
 
 const bufferLength=analyser.frequencyBinCount;
 const dataArray=new Uint8Array(bufferLength);
+const smoothArray=new Float32Array(bufferLength);
 
 // Playlist
 const maxTracks=50;
@@ -72,26 +73,27 @@ logo.src="https://bvp.neocities.org/roblox%20pfp.png";
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
+
+  // Smooth / decay
+  for(let i=0;i<bufferLength;i++){
+    smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
+  }
+
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const bars=15000;
-  const step=Math.floor(bufferLength/bars);
+  const bars=25000;
   const hueShift=Date.now()*0.02;
 
   for(let i=0;i<bars;i++){
-    // Determine which section this bar belongs to
-    let section = Math.floor((i/bars)*3); // 0,1,2
-    let segStart = Math.floor(section*bufferLength/3);
-    let segEnd = Math.floor((section+1)*bufferLength/3);
-    let index = segStart + Math.floor(Math.random()*(segEnd-segStart));
-    const value=dataArray[index]||0;
+    // logarithmic mapping
+    const logIndex=Math.floor(Math.pow(i/bars,0.5)*bufferLength);
+    const value=smoothArray[logIndex]||0;
     const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
 
-    // angle full circle
     let baseAngle=(i/bars)*Math.PI*2;
-    const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.1;
+    const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.05;
     const angle=baseAngle+waveOffset;
-    const barLength=Math.max(3,spike);
+    const barLength=Math.max(2,spike);
 
     const x1=centerX+Math.cos(angle)*logoRadius;
     const y1=centerY+Math.sin(angle)*logoRadius;
@@ -100,7 +102,7 @@ function draw(){
 
     const hue=(i*360/bars+hueShift)%360;
     ctx.strokeStyle=`hsl(${hue},100%,50%)`;
-    ctx.lineWidth=0.4;
+    ctx.lineWidth=0.3;
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
