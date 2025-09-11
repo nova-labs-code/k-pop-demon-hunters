@@ -29,7 +29,7 @@ canvas { display:block; }
 <body>
 
 <div id="startText">Click to Start</div>
-<audio id="player"></audio>
+<audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
 
 <script>
@@ -55,7 +55,7 @@ const dataArray = new Uint8Array(bufferLength);
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++){
-    tracks.push(`https://dev-bvp.github.io/kpop-demon-hunters/song${i}.mp3`);
+    tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
 }
 let currentTrack = 0;
 
@@ -67,13 +67,16 @@ function playNextTrack(){
     currentTrack++;
 }
 
-// Click-to-start
+// --- Click to start ---
 startText.addEventListener("click", ()=>{
-    if(audioCtx.state === "suspended") audioCtx.resume();
-    startText.style.display = "none";
-    playNextTrack();
+    // Resume AudioContext after user interaction
+    audioCtx.resume().then(()=>{
+        startText.style.display = "none";
+        playNextTrack();
+    });
 });
 
+// Automatically play next track when one ends
 audio.addEventListener("ended", playNextTrack);
 
 // --- Draw loop ---
@@ -89,11 +92,9 @@ function draw(){
     const barWidth = canvas.width / bufferLength * 2;
     let x = 0;
     for(let i = 0; i < bufferLength; i++){
-        // Amplify bass for beat reaction
         const multiplier = (i < 30) ? 3.5 : 1.5;
         const barHeight = dataArray[i]*multiplier;
 
-        // Color by frequency
         ctx.fillStyle = `hsl(${i*2},100%,50%)`;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
