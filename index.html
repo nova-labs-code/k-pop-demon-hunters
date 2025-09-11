@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3000-Bar Circle Visualizer</title>
+<title>8000-Bar Circle Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -40,10 +40,10 @@ canvas.height = 1080;
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
 
-// Audio setup
+// Audio context
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 16384;
+analyser.fftSize = 32768; // high-res for 8000 bars
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -51,7 +51,7 @@ analyser.connect(audioCtx.destination);
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 
-// Playlist with shuffle
+// Playlist shuffle
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++){
@@ -69,7 +69,7 @@ function playNextTrack(){
 }
 audio.addEventListener("ended", playNextTrack);
 
-// Shuffle function
+// Fisher–Yates shuffle
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -100,14 +100,14 @@ function draw(){
   const centerX = canvas.width/2;
   const centerY = canvas.height/2;
   const logoRadius = 120; // logo radius
-  const bars = 3000;
+  const bars = 8000;
   const step = Math.floor(bufferLength / bars);
-  let hueShift = Date.now() * 0.02;
+  const hueShift = Date.now() * 0.02;
 
   for(let i=0;i<bars;i++){
     const value = dataArray[i*step] || 0;
     const angle = (i / bars) * Math.PI * 2;
-    const barLength = Math.max(10, value * 0.8);
+    const barLength = Math.max(5, value * 0.5);
 
     // start from edge of logo
     const x1 = centerX + Math.cos(angle) * logoRadius;
@@ -117,14 +117,14 @@ function draw(){
 
     const hue = (i * 360 / bars + hueShift) % 360;
     ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.7;
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
     ctx.stroke();
   }
 
-  // Draw logo at center
+  // Draw logo centered
   if(logo.complete){
     const size = logoRadius * 2;
     ctx.save();
