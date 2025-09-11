@@ -2,27 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Full-Circle 15k Audio Visualizer</title>
+<title>15k Quartered Audio Visualizer</title>
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  background:black;
-  cursor:pointer;
-}
+html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
 #startText {
-  position:absolute;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  color:white;
-  font-size:48px;
-  font-family:sans-serif;
-  user-select:none;
-  background:rgba(0,0,0,0.85);
+  position:absolute; inset:0; display:flex; justify-content:center; align-items:center;
+  color:white; font-size:48px; font-family:sans-serif; user-select:none; background:rgba(0,0,0,0.85);
 }
 </style>
 </head>
@@ -30,126 +16,102 @@ canvas { display:block; }
 <div id="startText">Click to Start</div>
 <audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
-
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-function resizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+const canvas=document.getElementById("canvas"), ctx=canvas.getContext("2d");
+function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-let centerX = canvas.width / 2;
-let centerY = canvas.height / 2;
-let logoRadius = Math.min(canvas.width, canvas.height) * 0.06 * 2; // doubled
-
+let centerX=canvas.width/2, centerY=canvas.height/2;
+let logoRadius=Math.min(canvas.width,canvas.height)*0.06*2;
 window.addEventListener('resize', ()=>{
-    centerX = canvas.width / 2;
-    centerY = canvas.height / 2;
-    logoRadius = Math.min(canvas.width, canvas.height) * 0.06 * 2;
+    centerX=canvas.width/2; centerY=canvas.height/2;
+    logoRadius=Math.min(canvas.width,canvas.height)*0.06*2;
 });
 
-const startText = document.getElementById("startText");
-const audio = document.getElementById("player");
+const startText=document.getElementById("startText");
+const audio=document.getElementById("player");
 
-// Audio setup
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768;
-const source = audioCtx.createMediaElementSource(audio);
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+const analyser=audioCtx.createAnalyser();
+analyser.fftSize=32768;
+const source=audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
 
-const bufferLength = analyser.frequencyBinCount;
-const dataArray = new Uint8Array(bufferLength);
+const bufferLength=analyser.frequencyBinCount;
+const dataArray=new Uint8Array(bufferLength);
 
-// Playlist shuffle
-const maxTracks = 50;
-let tracks = [];
-for(let i=1;i<=maxTracks;i++){
-  tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
-}
+// Playlist
+const maxTracks=50;
+let tracks=[];
+for(let i=1;i<=maxTracks;i++){ tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`); }
 shuffle(tracks);
 
-let currentTrack = 0;
-function playNextTrack(){
+let currentTrack=0;
+function playNextTrack(){ 
   if(tracks.length===0) return;
-  if(currentTrack >= tracks.length) currentTrack = 0;
-  audio.src = tracks[currentTrack];
-  audio.play().catch(err => console.log("Play error:", err));
+  if(currentTrack>=tracks.length) currentTrack=0;
+  audio.src=tracks[currentTrack];
+  audio.play().catch(e=>console.log("Play error:",e));
   currentTrack++;
 }
 audio.addEventListener("ended", playNextTrack);
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-// Start on click
+// Start
 startText.addEventListener("click", ()=>{
-  audioCtx.resume().then(()=>{
-    startText.style.display = "none";
-    document.body.style.cursor = "none";
-    playNextTrack();
-  });
+    audioCtx.resume().then(()=>{ startText.style.display="none"; document.body.style.cursor="none"; playNextTrack(); });
 });
 
 // Logo
-const logo = new Image();
-logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
+const logo=new Image();
+logo.src="https://bvp.neocities.org/roblox%20pfp.png";
 
-// Draw loop
+// Draw
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
-
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const bars = 15000;
-  const step = Math.floor(bufferLength / bars);
-  const hueShift = Date.now() * 0.02;
+  const bars=15000;
+  const step=Math.floor(bufferLength/bars);
+  const hueShift=Date.now()*0.02;
 
   for(let i=0;i<bars;i++){
-    const value = dataArray[i*step] || 0;
-    const spike = Math.pow(value/255, 2) * Math.min(canvas.width, canvas.height) * 0.125;
+    let quarter=Math.floor((i/bars)*4); // 0-3
+    let segStart=Math.floor(quarter*bufferLength/4);
+    let segEnd=Math.floor((quarter+1)*bufferLength/4);
+    let index=segStart + Math.floor(Math.random()*(segEnd-segStart));
+    const value=dataArray[index]||0;
+    const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
 
-    // full circle angle 0 to 2PI
-    let baseAngle = (i / bars) * Math.PI * 2;
+    let baseAngle=(i/bars)*Math.PI*2;
+    const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.1;
+    const angle=baseAngle+waveOffset;
+    const barLength=Math.max(3,spike);
 
-    // optional wave offset for smooth motion
-    const waveOffset = Math.sin(Date.now()*0.002 + i*0.005) * 0.1;
-    const angle = baseAngle + waveOffset;
+    const x1=centerX+Math.cos(angle)*logoRadius;
+    const y1=centerY+Math.sin(angle)*logoRadius;
+    const x2=centerX+Math.cos(angle)*(logoRadius+barLength);
+    const y2=centerY+Math.sin(angle)*(logoRadius+barLength);
 
-    const barLength = Math.max(3, spike);
-
-    const x1 = centerX + Math.cos(angle) * logoRadius;
-    const y1 = centerY + Math.sin(angle) * logoRadius;
-    const x2 = centerX + Math.cos(angle) * (logoRadius + barLength);
-    const y2 = centerY + Math.sin(angle) * (logoRadius + barLength);
-
-    const hue = (i * 360 / bars + hueShift) % 360;
-    ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 0.4;
+    const hue=(i*360/bars+hueShift)%360;
+    ctx.strokeStyle=`hsl(${hue},100%,50%)`;
+    ctx.lineWidth=0.4;
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
     ctx.stroke();
   }
 
-  // Draw logo
   if(logo.complete){
-    const size = logoRadius * 2;
+    const size=logoRadius*2;
     ctx.save();
     ctx.beginPath();
-    ctx.arc(centerX, centerY, logoRadius, 0, Math.PI*2);
+    ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
     ctx.clip();
-    ctx.drawImage(logo, centerX - logoRadius, centerY - logoRadius, size, size);
+    ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
     ctx.restore();
   }
 }
