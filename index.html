@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>15k Half-Mirror Visualizer</title>
+<title>Full-Circle 15k Audio Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -119,39 +119,26 @@ function draw(){
     const value = dataArray[i*step] || 0;
     const spike = Math.pow(value/255, 2) * Math.min(canvas.width, canvas.height) * 0.125;
 
-    // Right half: angle 0 to PI
-    let baseAngle = (i / bars) * Math.PI;
+    // full circle angle 0 to 2PI
+    let baseAngle = (i / bars) * Math.PI * 2;
 
-    // wave offset
-    const waveOffset = Math.sin(Date.now()*0.002 + i*0.005) * 0.2;
-    const angleRight = baseAngle + waveOffset;
-    const barLengthRight = Math.max(3, spike);
+    // optional wave offset for smooth motion
+    const waveOffset = Math.sin(Date.now()*0.002 + i*0.005) * 0.1;
+    const angle = baseAngle + waveOffset;
 
-    const x1r = centerX + Math.cos(angleRight) * logoRadius;
-    const y1r = centerY + Math.sin(angleRight) * logoRadius;
-    const x2r = centerX + Math.cos(angleRight) * (logoRadius + barLengthRight);
-    const y2r = centerY + Math.sin(angleRight) * (logoRadius + barLengthRight);
+    const barLength = Math.max(3, spike);
+
+    const x1 = centerX + Math.cos(angle) * logoRadius;
+    const y1 = centerY + Math.sin(angle) * logoRadius;
+    const x2 = centerX + Math.cos(angle) * (logoRadius + barLength);
+    const y2 = centerY + Math.sin(angle) * (logoRadius + barLength);
 
     const hue = (i * 360 / bars + hueShift) % 360;
     ctx.strokeStyle = `hsl(${hue},100%,50%)`;
     ctx.lineWidth = 0.4;
     ctx.beginPath();
-    ctx.moveTo(x1r,y1r);
-    ctx.lineTo(x2r,y2r);
-    ctx.stroke();
-
-    // Left half mirror: angle + PI, 1% smaller
-    const angleLeft = angleRight + Math.PI;
-    const barLengthLeft = barLengthRight * 0.99;
-
-    const x1l = centerX + Math.cos(angleLeft) * logoRadius;
-    const y1l = centerY + Math.sin(angleLeft) * logoRadius;
-    const x2l = centerX + Math.cos(angleLeft) * (logoRadius + barLengthLeft);
-    const y2l = centerY + Math.sin(angleLeft) * (logoRadius + barLengthLeft);
-
-    ctx.beginPath();
-    ctx.moveTo(x1l,y1l);
-    ctx.lineTo(x2l,y2l);
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
     ctx.stroke();
   }
 
