@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>15k Quartered Audio Visualizer</title>
+<title>15k Three-Part Audio Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -79,13 +79,15 @@ function draw(){
   const hueShift=Date.now()*0.02;
 
   for(let i=0;i<bars;i++){
-    let quarter=Math.floor((i/bars)*4); // 0-3
-    let segStart=Math.floor(quarter*bufferLength/4);
-    let segEnd=Math.floor((quarter+1)*bufferLength/4);
-    let index=segStart + Math.floor(Math.random()*(segEnd-segStart));
+    // Determine which section this bar belongs to
+    let section = Math.floor((i/bars)*3); // 0,1,2
+    let segStart = Math.floor(section*bufferLength/3);
+    let segEnd = Math.floor((section+1)*bufferLength/3);
+    let index = segStart + Math.floor(Math.random()*(segEnd-segStart));
     const value=dataArray[index]||0;
     const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
 
+    // angle full circle
     let baseAngle=(i/bars)*Math.PI*2;
     const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.1;
     const angle=baseAngle+waveOffset;
