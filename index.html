@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Advanced Beat Visualizer</title>
+<title>Circular Beat Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -23,6 +23,7 @@ canvas { display:block; }
   font-size:48px;
   font-family:sans-serif;
   user-select:none;
+  background:rgba(0,0,0,0.8);
 }
 </style>
 </head>
@@ -39,11 +40,10 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const startText = document.getElementById("startText");
-
 const audio = document.getElementById("player");
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 2048; // higher resolution
+analyser.fftSize = 2048;
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -75,47 +75,68 @@ startText.addEventListener("click", ()=>{
         playNextTrack();
     });
 });
-
 audio.addEventListener("ended", playNextTrack);
 
-// --- Draw loop ---
+// --- Load central logo ---
+const logo = new Image();
+logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
+
+// --- Circular visualizer ---
 function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    // Fade for trail effect
-    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    const barWidth = canvas.width / bufferLength * 2;
-    let x = 0;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) / 3;
 
-    // Calculate volume levels for bass/mid/treble
-    const bass = dataArray.slice(0,20).reduce((a,b)=>a+b,0)/20;
-    const mid = dataArray.slice(20,100).reduce((a,b)=>a+b,0)/80;
-    const treble = dataArray.slice(100,bufferLength).reduce((a,b)=>a+b,0)/(bufferLength-100);
+    const bars = 180;
+    const step = Math.floor(bufferLength / bars);
 
-    for(let i = 0; i < bufferLength; i++){
-        // Base multiplier based on frequency band
-        let multiplier;
-        if(i < 20) multiplier = 4 + bass/30;       // Bass
-        else if(i < 100) multiplier = 2 + mid/60;  // Mid
-        else multiplier = 1 + treble/80;           // Treble/Highs
+    for(let i = 0; i < bars; i++){
+        const value = dataArray[i*step];
+        const angle = (i / bars) * Math.PI * 2;
+        const barLength = value * 1.2;
 
-        const barHeight = dataArray[i] * multiplier;
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barLength);
+        const y2 = centerY + Math.sin(angle) * (radius + barLength);
 
-        // Color dynamically by frequency + amplitude
-        const hue = (i*2 + barHeight*0.5) % 360;
-        ctx.fillStyle = `hsl(${hue},100%,50%)`;
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        const hue = (i*2 + value*0.5) % 360;
+        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(x2,y2);
+        ctx.stroke();
+    }
 
-        x += barWidth + 1;
+    // Bass circle pulse
+    const bass = dataArray.slice(0,40).reduce((a,b)=>a+b,0)/40;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.6 + bass/5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,0.05)`;
+    ctx.fill();
+
+    // Draw logo in center
+    if(logo.complete){
+        const size = radius * 0.9;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, size/2, 0, Math.PI*2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(logo, centerX - size/2, centerY - size/2, size, size);
+        ctx.restore();
     }
 }
 
 draw();
 
-// Handle window resize
 window.addEventListener("resize", ()=>{
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
