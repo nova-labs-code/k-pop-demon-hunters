@@ -2,20 +2,33 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>25k Full-Circle YouTube-Style Audio Visualizer</title>
+<title>25k YouTube-Style Audio Visualizer with Controls</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
 #startText {
-  position:absolute; inset:0; display:flex; justify-content:center; align-items:center;
-  color:white; font-size:48px; font-family:sans-serif; user-select:none; background:rgba(0,0,0,0.85);
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  display:flex; justify-content:center; align-items:center;
+  color:white; font-size:48px; font-family:sans-serif;
+  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
+  cursor:pointer;
 }
+#controls {
+  position: fixed; bottom: 20px; left:50%; transform: translateX(-50%);
+  display:flex; gap:20px; z-index:9999;
+}
+button { padding:10px 20px; font-size:16px; cursor:pointer; }
 </style>
 </head>
 <body>
 <div id="startText">Click to Start</div>
+<div id="controls" style="display:none;">
+  <button id="prevBtn">⏮️ Prev</button>
+  <button id="nextBtn">⏭️ Next</button>
+</div>
 <audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
+
 <script>
 const canvas=document.getElementById("canvas"), ctx=canvas.getContext("2d");
 
@@ -27,18 +40,21 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 let centerX=canvas.width/2, centerY=canvas.height/2;
-let logoRadius=Math.min(canvas.width,canvas.height)*0.12; // doubled
+let logoRadius=Math.min(canvas.width,canvas.height)*0.12;
 window.addEventListener('resize', ()=>{
     centerX=canvas.width/2; centerY=canvas.height/2;
     logoRadius=Math.min(canvas.width,canvas.height)*0.12;
 });
 
 const startText=document.getElementById("startText");
+const controls=document.getElementById("controls");
+const prevBtn=document.getElementById("prevBtn");
+const nextBtn=document.getElementById("nextBtn");
 const audio=document.getElementById("player");
 
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 const analyser=audioCtx.createAnalyser();
-analyser.fftSize=65536; // high resolution for 25k bars
+analyser.fftSize=65536;
 const source=audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -54,14 +70,16 @@ for(let i=1;i<=maxTracks;i++){ tracks.push(`https://dev-bvp.github.io/k-pop-demo
 shuffle(tracks);
 
 let currentTrack=0;
-function playNextTrack(){ 
-  if(tracks.length===0) return;
-  if(currentTrack>=tracks.length) currentTrack=0;
-  audio.src=tracks[currentTrack];
-  audio.play().catch(e=>console.log("Play error:",e));
-  currentTrack++;
+function playTrack(index){
+    if(tracks.length===0) return;
+    if(index<0) index=tracks.length-1;
+    if(index>=tracks.length) index=0;
+    currentTrack=index;
+    audio.src=tracks[currentTrack];
+    audio.play().catch(e=>console.log("Play error:",e));
 }
-audio.addEventListener("ended", playNextTrack);
+audio.addEventListener("ended",()=>playTrack(currentTrack+1));
+
 function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 
 // Start
@@ -69,9 +87,14 @@ startText.addEventListener("click", ()=>{
     audioCtx.resume().then(()=>{
         startText.style.display="none";
         document.body.style.cursor="none";
-        playNextTrack();
+        controls.style.display="flex";
+        playTrack(currentTrack);
     });
 });
+
+// Skip buttons
+prevBtn.addEventListener("click", ()=>playTrack(currentTrack-1));
+nextBtn.addEventListener("click", ()=>playTrack(currentTrack+1));
 
 // Logo
 const logo=new Image();
@@ -82,7 +105,6 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    // smoothing/decay
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
     }
@@ -93,12 +115,10 @@ function draw(){
     const hueShift=Date.now()*0.02;
 
     for(let i=0;i<bars;i++){
-        // logarithmic mapping for YouTube-style spread
         const logIndex=Math.floor(Math.pow(i/bars,0.5)*bufferLength);
         const value=smoothArray[logIndex]||0;
         const spike=Math.pow(value/255,2)*Math.min(canvas.width,canvas.height)*0.125;
 
-        // base angle and sine wobble
         let baseAngle=(i/bars)*Math.PI*2;
         const waveOffset=Math.sin(Date.now()*0.002+i*0.005)*0.05;
         const angle=baseAngle+waveOffset;
@@ -109,7 +129,6 @@ function draw(){
         const x2=centerX+Math.cos(angle)*(logoRadius+barLength);
         const y2=centerY+Math.sin(angle)*(logoRadius+barLength);
 
-        // color gradient
         const hue=(i*360/bars+hueShift)%360;
         ctx.strokeStyle=`hsl(${hue},100%,50%)`;
         ctx.lineWidth=0.3;
@@ -119,7 +138,6 @@ function draw(){
         ctx.stroke();
     }
 
-    // draw logo masked
     if(logo.complete){
         const size=logoRadius*2;
         ctx.save();
