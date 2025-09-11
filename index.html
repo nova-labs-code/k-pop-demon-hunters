@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Visualizer</title>
+<title>3000-Bar Music Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -22,7 +22,7 @@ canvas { display:block; }
   font-size:48px;
   font-family:sans-serif;
   user-select:none;
-  background:rgba(0,0,0,0.8);
+  background:rgba(0,0,0,0.85);
 }
 </style>
 </head>
@@ -39,9 +39,11 @@ canvas.height = 1080;
 
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
+
+// audio context setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 4096;
+analyser.fftSize = 16384; // high resolution for 3000 bars
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -49,7 +51,7 @@ analyser.connect(audioCtx.destination);
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 
-// track list (song1 → song50)
+// playlist
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++){
@@ -74,7 +76,7 @@ startText.addEventListener("click", ()=>{
 });
 audio.addEventListener("ended", playNextTrack);
 
-// assets
+// images
 const logo = new Image();
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
 const bg = new Image();
@@ -85,37 +87,37 @@ function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
 
-  // draw background
+  // background
   ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
   const centerX = canvas.width/2;
   const centerY = canvas.height/2;
   const radius = 280;
 
-  const bars = 300;
+  const bars = 3000;
   const step = Math.floor(bufferLength / bars);
+  let hueShift = Date.now() * 0.02; // rainbow rotation
 
   for(let i=0;i<bars;i++){
     const value = dataArray[i*step] || 0;
-    const angle = (i / bars) * Math.PI * 2; // even distribution
-    // keep minimum bar length so they're always visible
-    const barLength = Math.max(20, value * 1.2);
+    const angle = (i / bars) * Math.PI * 2;
+    const barLength = Math.max(10, value * 0.8);
 
     const x1 = centerX + Math.cos(angle) * radius;
     const y1 = centerY + Math.sin(angle) * radius;
     const x2 = centerX + Math.cos(angle) * (radius + barLength);
     const y2 = centerY + Math.sin(angle) * (radius + barLength);
 
-    const hue = (i * 360 / bars + value) % 360;
+    const hue = (i * 360 / bars + hueShift) % 360;
     ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
     ctx.stroke();
   }
 
-  // logo in center
+  // circle logo
   if(logo.complete){
     const size = radius * 1.1;
     ctx.save();
