@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Audio Visualizer</title>
+<title>Beat Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -51,19 +51,6 @@ analyser.connect(audioCtx.destination);
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 
-// Particle system
-const particles = [];
-for(let i=0;i<250;i++){
-  particles.push({
-    x: Math.random()*canvas.width,
-    y: Math.random()*canvas.height,
-    vx: (Math.random()-0.5)*2,
-    vy: (Math.random()-0.5)*2,
-    size: Math.random()*3+1,
-    color: `hsl(${Math.random()*360},100%,50%)`
-  });
-}
-
 // --- Tracks sequentially from song1 to song50 ---
 const maxTracks = 50;
 let tracks = [];
@@ -72,7 +59,6 @@ for(let i=1;i<=maxTracks;i++){
 }
 let currentTrack = 0;
 
-// Play next track function
 function playNextTrack(){
     if(tracks.length===0) return;
     if(currentTrack >= tracks.length) currentTrack = 0;
@@ -81,7 +67,7 @@ function playNextTrack(){
     currentTrack++;
 }
 
-// Click to start
+// Click-to-start
 startText.addEventListener("click", ()=>{
     if(audioCtx.state === "suspended") audioCtx.resume();
     startText.style.display = "none";
@@ -99,38 +85,20 @@ function draw(){
     ctx.fillStyle = "rgba(0,0,0,0.1)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Draw frequency bars rising from bottom
+    // Draw bars from bottom up, reacting to beat/bass
     const barWidth = canvas.width / bufferLength * 2;
     let x = 0;
     for(let i = 0; i < bufferLength; i++){
         // Amplify bass for beat reaction
-        const multiplier = (i < 30) ? 2.5 : 1.5;
+        const multiplier = (i < 30) ? 3.5 : 1.5;
         const barHeight = dataArray[i]*multiplier;
 
-        const r = barHeight + 50;
-        const g = 255 - barHeight;
-        const b = i * 2;
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-
+        // Color by frequency
+        ctx.fillStyle = `hsl(${i*2},100%,50%)`;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
         x += barWidth + 1;
     }
-
-    // Draw particles reacting to bass
-    const bass = dataArray.slice(0,20).reduce((a,b)=>a+b,0)/20;
-    particles.forEach(p=>{
-        p.x += p.vx + (Math.random()-0.5)*0.5;
-        p.y += p.vy + (Math.random()-0.5)*0.5;
-        if(p.x>canvas.width) p.x=0;
-        if(p.x<0) p.x=canvas.width;
-        if(p.y>canvas.height) p.y=0;
-        if(p.y<0) p.y=canvas.height;
-        const size = p.size + bass*0.05;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,size,0,Math.PI*2);
-        ctx.fill();
-    });
 }
 
 draw();
