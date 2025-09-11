@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Circular Beat Visualizer</title>
+<title>Epic Circular Visualizer</title>
 <style>
 html, body {
   margin:0;
@@ -31,19 +31,19 @@ canvas { display:block; }
 
 <div id="startText">Click to Start</div>
 <audio id="player" type="audio/mpeg"></audio>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" width="1920" height="1080"></canvas>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = 1920;
+canvas.height = 1080;
 
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 2048;
+analyser.fftSize = 4096;
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -51,14 +51,13 @@ analyser.connect(audioCtx.destination);
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 
-// --- Tracks sequentially from song1 to song50 ---
+// --- Track list (song1 → song50) ---
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++){
     tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
 }
 let currentTrack = 0;
-
 function playNextTrack(){
     if(tracks.length===0) return;
     if(currentTrack >= tracks.length) currentTrack = 0;
@@ -71,64 +70,75 @@ function playNextTrack(){
 startText.addEventListener("click", ()=>{
     audioCtx.resume().then(()=>{
         startText.style.display = "none";
-        document.body.style.cursor = "none"; // hide cursor
+        document.body.style.cursor = "none";
         playNextTrack();
     });
 });
 audio.addEventListener("ended", playNextTrack);
 
-// --- Load central logo ---
+// --- Assets ---
 const logo = new Image();
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
+const bg = new Image();
+bg.src = "https://bvp.neocities.org/sagaboys%20huntrix.png";
 
-// --- Circular visualizer ---
+// --- Camera shake ---
+let shakeX = 0, shakeY = 0;
+
+// --- Visualizer ---
 function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    // Bass detection
+    const bass = dataArray.slice(0, 60).reduce((a,b)=>a+b,0)/60;
+    shakeX = (Math.random() - 0.5) * bass * 0.4;
+    shakeY = (Math.random() - 0.5) * bass * 0.4;
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) / 3;
+    // Background with shake
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+    ctx.drawImage(bg, 0, 0, 1920, 1080);
+    ctx.restore();
 
-    const bars = 180;
+    const centerX = canvas.width / 2 + shakeX;
+    const centerY = canvas.height / 2 + shakeY;
+    const radius = Math.min(centerX, centerY) / 2.5;
+
+    const bars = 300;
     const step = Math.floor(bufferLength / bars);
 
     for(let i = 0; i < bars; i++){
         const value = dataArray[i*step];
         const angle = (i / bars) * Math.PI * 2;
-        const barLength = value * 1.2;
+        const barLength = value * 1.3;
 
         const x1 = centerX + Math.cos(angle) * radius;
         const y1 = centerY + Math.sin(angle) * radius;
         const x2 = centerX + Math.cos(angle) * (radius + barLength);
         const y2 = centerY + Math.sin(angle) * (radius + barLength);
 
-        const hue = (i*2 + value*0.5) % 360;
+        const hue = (i*1.2 + value*0.6) % 360;
         ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x1,y1);
         ctx.lineTo(x2,y2);
         ctx.stroke();
     }
 
-    // Bass circle pulse
-    const bass = dataArray.slice(0,40).reduce((a,b)=>a+b,0)/40;
+    // Pulse circle
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.6 + bass/5, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(255,255,255,0.05)`;
+    ctx.arc(centerX, centerY, radius * 0.55 + bass/4, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,0.07)`;
     ctx.fill();
 
-    // Draw logo in center
+    // Logo
     if(logo.complete){
         const size = radius * 0.9;
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, size/2, 0, Math.PI*2);
-        ctx.closePath();
         ctx.clip();
         ctx.drawImage(logo, centerX - size/2, centerY - size/2, size, size);
         ctx.restore();
@@ -136,11 +146,6 @@ function draw(){
 }
 
 draw();
-
-window.addEventListener("resize", ()=>{
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
 </script>
 
 </body>
