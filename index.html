@@ -40,10 +40,10 @@ canvas.height = 1080;
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
 
-// audio context setup
+// audio context
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 16384; // high resolution for 3000 bars
+analyser.fftSize = 16384;
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -51,12 +51,14 @@ analyser.connect(audioCtx.destination);
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 
-// playlist
+// playlist (shuffle applied)
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++){
   tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
 }
+shuffle(tracks);
+
 let currentTrack = 0;
 function playNextTrack(){
   if(tracks.length===0) return;
@@ -64,6 +66,15 @@ function playNextTrack(){
   audio.src = tracks[currentTrack];
   audio.play().catch(err => console.log("Play error:", err));
   currentTrack++;
+}
+audio.addEventListener("ended", playNextTrack);
+
+// Fisher–Yates shuffle
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 }
 
 // start on click
@@ -74,21 +85,17 @@ startText.addEventListener("click", ()=>{
     playNextTrack();
   });
 });
-audio.addEventListener("ended", playNextTrack);
 
-// images
+// logo image
 const logo = new Image();
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
-const bg = new Image();
-bg.src = "https://bvp.neocities.org/sagaboys%20huntrix.png";
 
 // draw loop
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
 
-  // background
-  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   const centerX = canvas.width/2;
   const centerY = canvas.height/2;
@@ -96,7 +103,7 @@ function draw(){
 
   const bars = 3000;
   const step = Math.floor(bufferLength / bars);
-  let hueShift = Date.now() * 0.02; // rainbow rotation
+  let hueShift = Date.now() * 0.02;
 
   for(let i=0;i<bars;i++){
     const value = dataArray[i*step] || 0;
@@ -110,14 +117,14 @@ function draw(){
 
     const hue = (i * 360 / bars + hueShift) % 360;
     ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
     ctx.stroke();
   }
 
-  // circle logo
+  // logo in center
   if(logo.complete){
     const size = radius * 1.1;
     ctx.save();
