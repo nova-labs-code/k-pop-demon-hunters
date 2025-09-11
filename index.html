@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>8000-Bar Circle Visualizer</title>
+<title>8000-Bar Circle Visualizer x3 Effect</title>
 <style>
 html, body {
   margin:0;
@@ -40,7 +40,7 @@ canvas.height = 1080;
 const startText = document.getElementById("startText");
 const audio = document.getElementById("player");
 
-// Audio context
+// Audio setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 32768; // high-res for 8000 bars
@@ -69,7 +69,7 @@ function playNextTrack(){
 }
 audio.addEventListener("ended", playNextTrack);
 
-// Fisher–Yates shuffle
+// Shuffle function
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -99,32 +99,35 @@ function draw(){
 
   const centerX = canvas.width/2;
   const centerY = canvas.height/2;
-  const logoRadius = 120; // logo radius
-  const bars = 8000;
+  const logoRadius = 120;
+  const bars = 80000;
   const step = Math.floor(bufferLength / bars);
   const hueShift = Date.now() * 0.02;
 
   for(let i=0;i<bars;i++){
     const value = dataArray[i*step] || 0;
-    const angle = (i / bars) * Math.PI * 2;
+    const angleBase = (i / bars) * Math.PI * 2;
     const barLength = Math.max(5, value * 0.5);
 
-    // start from edge of logo
-    const x1 = centerX + Math.cos(angle) * logoRadius;
-    const y1 = centerY + Math.sin(angle) * logoRadius;
-    const x2 = centerX + Math.cos(angle) * (logoRadius + barLength);
-    const y2 = centerY + Math.sin(angle) * (logoRadius + barLength);
+    // spawn 3 mini-bars per frequency
+    for(let j=-1;j<=1;j++){
+      const angle = angleBase + j*0.0008; // slight angle offset
+      const x1 = centerX + Math.cos(angle) * logoRadius;
+      const y1 = centerY + Math.sin(angle) * logoRadius;
+      const x2 = centerX + Math.cos(angle) * (logoRadius + barLength);
+      const y2 = centerY + Math.sin(angle) * (logoRadius + barLength);
 
-    const hue = (i * 360 / bars + hueShift) % 360;
-    ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
+      const hue = (i * 360 / bars + hueShift + j*10) % 360;
+      ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+    }
   }
 
-  // Draw logo centered
+  // Draw centered logo
   if(logo.complete){
     const size = logoRadius * 2;
     ctx.save();
