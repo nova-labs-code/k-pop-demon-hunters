@@ -69,9 +69,9 @@ function playNextTrack(){
 
 // --- Click to start ---
 startText.addEventListener("click", ()=>{
-    // Resume AudioContext after user interaction
     audioCtx.resume().then(()=>{
         startText.style.display = "none";
+        document.body.style.cursor = "none"; // <-- hides the mouse
         playNextTrack();
     });
 });
