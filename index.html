@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>YouTube-Style Visualizer with Media Keys</title>
+<title>YouTube-Style Visualizer 45k Bars</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -58,7 +58,7 @@ function playTrack(index){
 audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
 function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 
-// Media Session API for keyboard/media keys
+// Media keys
 if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
     navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
@@ -66,10 +66,10 @@ if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
 }
 
-// Web Audio setup
+// Web Audio
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768; // max allowed
+analyser.fftSize = 32768;
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -101,31 +101,34 @@ function draw(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const bars = 45000; // radial bars
+    const actualBars = 25000; // actual rendered
+    const layers = 2; // 2 layers for visual density (~50k)
     const hueShift = Date.now()*0.02;
 
-    for(let i=0;i<bars;i++){
-        const logIndex = Math.floor(Math.pow(i/bars,0.5)*bufferLength);
-        const value = smoothArray[logIndex] || 0;
-        const spike = Math.pow(value/255,2) * Math.min(canvas.width,canvas.height)*0.125;
+    for(let l=0;l<layers;l++){
+        for(let i=0;i<actualBars;i++){
+            const logIndex = Math.floor(Math.pow(i/actualBars,0.5)*bufferLength);
+            const value = smoothArray[logIndex] || 0;
+            const spike = Math.pow(value/255,2) * Math.min(canvas.width,canvas.height)*0.125;
 
-        let baseAngle = (i/bars)*Math.PI*2;
-        const waveOffset = Math.sin(Date.now()*0.002+i*0.005)*0.05;
-        const angle = baseAngle+waveOffset;
-        const barLength = Math.max(2,spike);
+            let baseAngle = (i/actualBars)*Math.PI*2;
+            const waveOffset = Math.sin(Date.now()*0.002+i*0.005 + l*0.01)*0.05;
+            const angle = baseAngle + waveOffset;
+            const barLength = Math.max(2,spike);
 
-        const x1 = centerX + Math.cos(angle)*logoRadius;
-        const y1 = centerY + Math.sin(angle)*logoRadius;
-        const x2 = centerX + Math.cos(angle)*(logoRadius+barLength);
-        const y2 = centerY + Math.sin(angle)*(logoRadius+barLength);
+            const x1 = centerX + Math.cos(angle)*logoRadius;
+            const y1 = centerY + Math.sin(angle)*logoRadius;
+            const x2 = centerX + Math.cos(angle)*(logoRadius+barLength);
+            const y2 = centerY + Math.sin(angle)*(logoRadius+barLength);
 
-        const hue = (i*360/bars+hueShift)%360;
-        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-        ctx.lineWidth = 0.3;
-        ctx.beginPath();
-        ctx.moveTo(x1,y1);
-        ctx.lineTo(x2,y2);
-        ctx.stroke();
+            const hue = (i*360/actualBars+hueShift + l*10)%360;
+            ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+            ctx.lineWidth = 0.3;
+            ctx.beginPath();
+            ctx.moveTo(x1,y1);
+            ctx.lineTo(x2,y2);
+            ctx.stroke();
+        }
     }
 
     if(logo.complete){
