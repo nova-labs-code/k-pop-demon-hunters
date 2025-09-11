@@ -9,13 +9,26 @@ html, body {
   padding:0;
   overflow:hidden;
   background:black;
-  cursor:none;
+  cursor:pointer;
 }
 canvas { display:block; }
+#startText {
+  position:absolute;
+  width:100%;
+  height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  font-size:48px;
+  font-family:sans-serif;
+  user-select:none;
+}
 </style>
 </head>
 <body>
 
+<div id="startText">Click to Start</div>
 <audio id="player"></audio>
 <canvas id="canvas"></canvas>
 
@@ -24,6 +37,8 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+const startText = document.getElementById("startText");
 
 const audio = document.getElementById("player");
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -68,9 +83,10 @@ function playNextTrack(){
 
 audio.addEventListener("ended", playNextTrack);
 
-// Click to start
-canvas.addEventListener("click", ()=>{
+// --- Click to start ---
+startText.addEventListener("click", ()=>{
     if(audioCtx.state === "suspended") audioCtx.resume();
+    startText.style.display = "none";
     playNextTrack();
 });
 
@@ -93,7 +109,7 @@ function draw(){
         const b = i * 2;
         ctx.fillStyle = `rgb(${r},${g},${b})`;
 
-        // Bottom-up bars
+        // Draw bars from bottom
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
         x += barWidth + 1;
     }
@@ -107,7 +123,7 @@ function draw(){
         if(p.x<0) p.x=canvas.width;
         if(p.y>canvas.height) p.y=0;
         if(p.y<0) p.y=canvas.height;
-        const size = p.size + bass*0.05; // particles react to bass
+        const size = p.size + bass*0.05;
         ctx.fillStyle = p.color;
         ctx.beginPath();
         ctx.arc(p.x,p.y,size,0,Math.PI*2);
