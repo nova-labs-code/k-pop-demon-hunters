@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Beat Visualizer</title>
+<title>Full Radial Spikes Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -35,13 +35,6 @@ resizeCanvas();
 let centerX = canvas.width/2, centerY = canvas.height/2;
 let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
 let logoRadius = logoBaseRadius;
-
-window.addEventListener('resize', ()=>{
-    centerX = canvas.width/2;
-    centerY = canvas.height/2;
-    logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
-    logoRadius = logoBaseRadius;
-});
 
 // Playlist
 const maxTracks = 50;
@@ -91,17 +84,16 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    // Smooth for cleaner movement
+    // Smooth for cleaner spikes
     for(let i=0;i<bufferLength;i++){
-        smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
+        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
 
-    // Compute overall beat/bass for pulsing
+    // Compute overall beat/bass for radial scaling
     let bassSum = 0;
     const bassLimit = Math.floor(200*bufferLength/22050);
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
     const bassAvg = bassSum / Math.max(1,bassLimit);
-    logoRadius = logoBaseRadius + bassAvg*0.5;
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -110,8 +102,9 @@ function draw(){
     for(let i=0;i<actualBars;i++){
         const angle = (i/actualBars)*Math.PI*2;
 
-        // All bars affected equally by audio (no per-bar wave)
-        const spike = (bassAvg/255) * Math.min(canvas.width,canvas.height)*0.25;
+        // Individual spike per bar
+        const freqIndex = Math.floor((i/actualBars) * bufferLength);
+        const spike = (smoothArray[freqIndex]/255) * Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
 
         const x1 = centerX + Math.cos(angle)*logoRadius;
         const y1 = centerY + Math.sin(angle)*logoRadius;
