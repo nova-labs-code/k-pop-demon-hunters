@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Visualizer with Logo Pulse & Bar Fade</title>
+<title>Radial Visualizer with Logo Pulse & Fade + Auto Resize</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -25,16 +25,16 @@ const ctx = canvas.getContext('2d');
 const audio = document.getElementById('player');
 const startText = document.getElementById('startText');
 
+let centerX, centerY, logoBaseRadius, logoRadius;
 function resizeCanvas(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    centerX = canvas.width / 2;
+    centerY = canvas.height / 2;
+    logoBaseRadius = Math.min(canvas.width, canvas.height) * 0.12;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
-
-let centerX = canvas.width/2, centerY = canvas.height/2;
-let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
-let logoRadius = logoBaseRadius;
 
 // Playlist
 const maxTracks = 50;
@@ -79,7 +79,7 @@ startText.addEventListener("click", ()=>{
 });
 
 const actualBars = 15000;
-const maxFreq = 1200; // first 1200 frequency bins
+const maxFreq = 1200;
 
 // Media keys support
 window.addEventListener('keydown', (e)=>{
@@ -97,7 +97,7 @@ function draw(){
     }
 
     // Fade effect for bars
-    ctx.fillStyle = 'rgba(0,0,0,0.15)'; // lower alpha = longer trail
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // Compute bass average for logo pulse
