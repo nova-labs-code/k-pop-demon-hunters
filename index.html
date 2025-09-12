@@ -107,7 +107,7 @@ function updateMediaSession(url){
     const name = trackNames[url.split('/').pop()] || "Unknown Song";
     if('mediaSession' in navigator){
         navigator.mediaSession.metadata = new MediaMetadata({
-            title: BVP,
+            title: name,
             artist: 'K-Pop Demon Hunters',
             album: 'KPDH Playlist',
             artwork: [
@@ -119,7 +119,7 @@ function updateMediaSession(url){
         navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
         navigator.mediaSession.setActionHandler('play', ()=>audio.play());
         // App name shown on media overlays
-        navigator.mediaSession.metadata.artist = "BVPSites";
+        navigator.mediaSession.metadata.artist = "Netflix";
     }
 }
 
