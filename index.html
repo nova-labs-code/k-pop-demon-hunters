@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Traveling Wave Circle Visualizer</title>
+<title>Radial Beat Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -91,11 +91,12 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
+    // Smooth for cleaner movement
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
     }
 
-    // Bass pulse for logo
+    // Compute overall beat/bass for pulsing
     let bassSum = 0;
     const bassLimit = Math.floor(200*bufferLength/22050);
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
@@ -105,19 +106,12 @@ function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const hueShift = Date.now()*0.02;
-    const t = Date.now()*0.002; // traveling wave speed
 
     for(let i=0;i<actualBars;i++){
-        const baseAngle = (i/actualBars)*Math.PI*2;
+        const angle = (i/actualBars)*Math.PI*2;
 
-        const freqIndex = Math.floor((i/actualBars) * bufferLength);
-        const value = smoothArray[freqIndex] || 0;
-
-        // Traveling wave around circle
-        const waveOffset = Math.sin(baseAngle*10 - t*8) * 0.2; // angle modulation
-        const angle = baseAngle + waveOffset;
-
-        const spike = (value/255) * Math.min(canvas.width,canvas.height)*0.18;
+        // All bars affected equally by audio (no per-bar wave)
+        const spike = (bassAvg/255) * Math.min(canvas.width,canvas.height)*0.25;
 
         const x1 = centerX + Math.cos(angle)*logoRadius;
         const y1 = centerY + Math.sin(angle)*logoRadius;
