@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Rhythmic Circle Visualizer</title>
+<title>Lined-Up Rhythmic Circle Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -113,19 +113,20 @@ function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const hueShift = Date.now()*0.02;
-    const t = Date.now()*0.001; // time base
+    const t = Date.now()*0.002; // rhythm wave time
 
     for(let i=0;i<actualBars;i++){
         const angle = (i/actualBars)*Math.PI*2;
 
-        // Instead of random freq, use rhythmic sweeping
-        const sweep = Math.floor(((Math.sin(t*0.7 + i*0.0003)+1)/2) * bufferLength);
-        const freqIndex = (i*4 + sweep) % bufferLength; 
+        // Assign each bar a steady frequency bin
+        const freqIndex = Math.floor((i/actualBars) * bufferLength);
         const value = smoothArray[freqIndex] || 0;
 
-        const spike = Math.pow(value/255,1.3) * Math.min(canvas.width,canvas.height)*0.18;
+        // Apply rhythmic wave modulation (keeps bars lined up)
+        const rhythm = (Math.sin(t + i*0.002)+1)/2; 
+        const spike = (value/255) * rhythm * Math.min(canvas.width,canvas.height)*0.25;
 
-        // Bar start from logo edge
+        // Bar start at logo edge
         const x1 = centerX + Math.cos(angle)*logoRadius;
         const y1 = centerY + Math.sin(angle)*logoRadius;
         const x2 = centerX + Math.cos(angle)*(logoRadius + spike);
