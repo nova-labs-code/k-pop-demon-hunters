@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Wavy Circle Visualizer</title>
+<title>Traveling Wave Circle Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -36,11 +36,19 @@ let centerX = canvas.width/2, centerY = canvas.height/2;
 let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
 let logoRadius = logoBaseRadius;
 
+window.addEventListener('resize', ()=>{
+    centerX = canvas.width/2;
+    centerY = canvas.height/2;
+    logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+    logoRadius = logoBaseRadius;
+});
+
 // Playlist
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++) tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
 shuffle(tracks);
+
 let currentTrack = 0;
 function playTrack(index){
     if(tracks.length===0) return;
@@ -79,7 +87,6 @@ startText.addEventListener("click", ()=>{
 
 const actualBars = 15000;
 
-// Draw
 function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
@@ -98,25 +105,24 @@ function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const hueShift = Date.now()*0.02;
-    const t = Date.now()*0.003; // wave animation speed
+    const t = Date.now()*0.002; // traveling wave speed
 
     for(let i=0;i<actualBars;i++){
-        const angle = (i/actualBars)*Math.PI*2;
+        const baseAngle = (i/actualBars)*Math.PI*2;
 
         const freqIndex = Math.floor((i/actualBars) * bufferLength);
         const value = smoothArray[freqIndex] || 0;
 
-        // Create wavy offset
-        const waveOffset = Math.sin(i*0.01 + t)*0.15; // percentage of logo radius
-        const spike = (value/255)*(Math.min(canvas.width,canvas.height)*0.18);
+        // Traveling wave around circle
+        const waveOffset = Math.sin(baseAngle*10 - t*8) * 0.2; // angle modulation
+        const angle = baseAngle + waveOffset;
 
-        const radiusStart = logoRadius;
-        const radiusEnd = logoRadius + spike*(1 + waveOffset);
+        const spike = (value/255) * Math.min(canvas.width,canvas.height)*0.18;
 
-        const x1 = centerX + Math.cos(angle)*radiusStart;
-        const y1 = centerY + Math.sin(angle)*radiusStart;
-        const x2 = centerX + Math.cos(angle)*radiusEnd;
-        const y2 = centerY + Math.sin(angle)*radiusEnd;
+        const x1 = centerX + Math.cos(angle)*logoRadius;
+        const y1 = centerY + Math.sin(angle)*logoRadius;
+        const x2 = centerX + Math.cos(angle)*(logoRadius + spike);
+        const y2 = centerY + Math.sin(angle)*(logoRadius + spike);
 
         const hue = (i*360/actualBars + hueShift)%360;
         ctx.strokeStyle = `hsl(${hue},100%,50%)`;
