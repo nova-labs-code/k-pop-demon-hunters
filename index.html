@@ -1,166 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>K-Pop Demon Hunters</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: #111;
-      color: #fff;
-      font-family: sans-serif;
-    }
-    audio {
-      width: 80%;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Pop Demon Hunters</title>
+<style>
+html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
+canvas { display:block; }
+#startText {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  display:flex; justify-content:center; align-items:center;
+  color:white; font-size:48px; font-family:sans-serif;
+  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
+  cursor:pointer;
+}
+</style>
 </head>
 <body>
-  <div>
-    <audio id="player" controls></audio>
-    <div>
-      <button id="prevBtn">Prev</button>
-      <button id="nextBtn">Next</button>
-      <button id="shuffleBtn">Shuffle</button>
-      <button id="repeatBtn">Repeat</button>
-    </div>
-  </div>
+<div id="startText">Click to Start</div>
+<audio id="player" type="audio/mpeg"></audio>
+<canvas id="canvas"></canvas>
 
-  <script>
-    const playlist = [
-      "Soda Pop (HUNTR/X Version)",
-      "How It's Done (KPOP DEMON HUNTERS METAL COVER)",
-      "Golden (Acapella)",
-      "Golden (Instrumental)",
-      "Golden (Sing-Along)",
-      "Golden",
-      "How It's Done (Acapella)",
-      "How It's Done (Instrumental)",
-      "How It's Done (Sing-Along)",
-      "How It's Done",
-      "Takedown (Acapella)",
-      "Takedown (Instrumental)",
-      "Takedown (Sing-Along)",
-      "Takedown",
-      "What It Sounds Like (Acapella)",
-      "What It Sounds Like (Instrumental)",
-      "What It Sounds Like (Sing-Along)",
-      "What It Sounds Like",
-      "Soda Pop (Cover)",
-      "Jinu's Lament",
-      "오솔길 Path",
-      "Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
-      "Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
-      "Your Idol - KPop Demon Hunters - Acoustic Cover",
-      "Prolouge (Hunter's Mantra)",
-      "Score Suite",
-      "Face Your Demons (Rumi Villain Song)",
-      "Your Idol (Huntrix Version)",
-      "Golden Cover (Rain Paris)",
-      "Free (Acapella)",
-      "Free (Instrumental)",
-      "Free (Sing-Along)",
-      "Free",
-      "Soda Pop (Acapella)",
-      "Soda Pop (Instrumental)",
-      "Soda Pop (Sing-Along)",
-      "Soda Pop",
-      "Your Idol (Acapella)",
-      "Your Idol (Instrumental)",
-      "Your Idol (Sing-Along)",
-      "Your Idol",
-      "Huntrix - Takedown (Singing Cover)",
-      "KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
-      "What it sounds like (acoustic)",
-      "Strategy",
-      "TAKEDOWN",
-      "Monst3r - Rumi (K-Pop Demon Hunters)",
-      "Takedown - Saja Boys (Demon Boy Cut)",
-      "사랑인가 봐 Love, Maybe",
-      "Golden (Acoustic Cover)"
-    ];
+<script>
+// Canvas setup
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-    const player = document.getElementById("player");
-    const prevBtn = document.getElementById("prevBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const shuffleBtn = document.getElementById("shuffleBtn");
-    const repeatBtn = document.getElementById("repeatBtn");
+// Playlist URLs
+const maxTracks = 50;
+let tracks = [];
+for(let i=1;i<=maxTracks;i++){
+    tracks.push(`https://raw.githubusercontent.com/yourusername/yourrepo/main/song${i}.mp3`);
+}
 
-    let currentTrack = 0;
-    let isShuffle = false;
-    let isRepeat = false;
+// Mapping GitHub filenames to real song names
+const trackNames = {
+  "song1.mp3": "Soda Pop (HUNTR/X Version)",
+  "song2.mp3": "How It's Done (KPOP DEMON HUNTERS METAL COVER)",
+  "song3.mp3": "Golden (Acapella)",
+  "song4.mp3": "Golden (Instrumental)",
+  "song5.mp3": "Golden (Sing-Along)",
+  "song6.mp3": "Golden",
+  "song7.mp3": "How It's Done (Acapella)",
+  "song8.mp3": "How It's Done (Instrumental)",
+  "song9.mp3": "How It's Done (Sing-Along)",
+  "song10.mp3": "How It's Done",
+  "song11.mp3": "Takedown (Acapella)",
+  "song12.mp3": "Takedown (Instrumental)",
+  "song13.mp3": "Takedown (Sing-Along)",
+  "song14.mp3": "Takedown",
+  "song15.mp3": "What It Sounds Like (Acapella)",
+  "song16.mp3": "What It Sounds Like (Instrumental)",
+  "song17.mp3": "What It Sounds Like (Sing-Along)",
+  "song18.mp3": "What It Sounds Like",
+  "song19.mp3": "Soda Pop (Cover)",
+  "song20.mp3": "Jinu's Lament",
+  "song21.mp3": "오솔길 Path",
+  "song22.mp3": "Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
+  "song23.mp3": "Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
+  "song24.mp3": "Your Idol - KPop Demon Hunters - Acoustic Cover",
+  "song25.mp3": "Prolouge (Hunter's Mantra)",
+  "song26.mp3": "Score Suite",
+  "song27.mp3": "Face Your Demons (Rumi Villain Song)",
+  "song28.mp3": "Your Idol (Huntrix Version)",
+  "song29.mp3": "Golden Cover (Rain Paris)",
+  "song30.mp3": "Free (Acapella)",
+  "song31.mp3": "Free (Instrumental)",
+  "song32.mp3": "Free (Sing-Along)",
+  "song33.mp3": "Free",
+  "song34.mp3": "Soda Pop (Acapella)",
+  "song35.mp3": "Soda Pop (Instrumental)",
+  "song36.mp3": "Soda Pop (Sing-Along)",
+  "song37.mp3": "Soda Pop",
+  "song38.mp3": "Your Idol (Acapella)",
+  "song39.mp3": "Your Idol (Instrumental)",
+  "song40.mp3": "Your Idol (Sing-Along)",
+  "song41.mp3": "Your Idol",
+  "song42.mp3": "Huntrix - Takedown (Singing Cover)",
+  "song43.mp3": "KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
+  "song44.mp3": "What it sounds like (acoustic)",
+  "song45.mp3": "Strategy",
+  "song46.mp3": "TAKEDOWN",
+  "song47.mp3": "Monst3r - Rumi (K-Pop Demon Hunters)",
+  "song48.mp3": "Takedown - Saja Boys (Demon Boy Cut)",
+  "song49.mp3": "사랑인가 봐 Love, Maybe",
+  "song50.mp3": "Golden (Acoustic Cover)"
+};
 
-    function loadTrack(index) {
-      currentTrack = index;
-      player.src = `https://dev-bvp.github.io/k-pop-demon-hunters/song${index+1}-50.mp3`;
-      player.play();
+// Shuffle helper
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+shuffle(tracks);
 
-      // Update Media Session metadata
-      if ("mediaSession" in navigator) {
+let currentTrack = 0;
+const audio = document.getElementById('player');
+
+// Update tab title from mapped song name
+function updateTabTitle(url){
+    const name = trackNames[url.split('/').pop()] || "Unknown Song";
+    document.title = `KPDH - ${name}`;
+}
+
+// Media Session API
+function updateMediaSession(url){
+    const name = trackNames[url.split('/').pop()] || "Unknown Song";
+    if('mediaSession' in navigator){
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: playlist[index],
-          artist: "K-Pop Demon Hunters",
-          album: "KPDH OST",
-          artwork: [
-            { src: "https://bvp.neocities.org/roblox%20pfp.png", sizes: "512x512", type: "image/png" }
-          ]
+            title: name,
+            artist: 'K-Pop Demon Hunters',
+            album: 'KPDH Playlist',
+            artwork: [
+                { src: 'https://bvp.neocities.org/roblox%20pfp.png', sizes: '512x512', type: 'image/png' }
+            ]
         });
-
-        navigator.mediaSession.setActionHandler("previoustrack", () => {
-          playPrev();
-        });
-
-        navigator.mediaSession.setActionHandler("nexttrack", () => {
-          playNext();
-        });
-      }
-
-      // Update tab title
-      document.title = "KPDH - " + playlist[index];
     }
+}
 
-    function playNext() {
-      if (isShuffle) {
-        loadTrack(Math.floor(Math.random() * playlist.length));
-      } else if (currentTrack < playlist.length - 1) {
-        loadTrack(currentTrack + 1);
-      } else if (isRepeat) {
-        loadTrack(0);
-      }
-    }
+// Play track function
+function playTrack(index){
+    if(tracks.length===0) return;
+    if(index<0) index = tracks.length-1;
+    if(index>=tracks.length) index = 0;
+    currentTrack = index;
+    audio.src = tracks[currentTrack];
+    updateTabTitle(tracks[currentTrack]);
+    updateMediaSession(tracks[currentTrack]);
+    audio.play().catch(e=>console.log("Play error:", e));
+}
 
-    function playPrev() {
-      if (isShuffle) {
-        loadTrack(Math.floor(Math.random() * playlist.length));
-      } else if (currentTrack > 0) {
-        loadTrack(currentTrack - 1);
-      } else if (isRepeat) {
-        loadTrack(playlist.length - 1);
-      }
-    }
+// Auto-next
+audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
 
-    player.addEventListener("ended", () => {
-      playNext();
+// Web Audio API
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 32768;
+const source = audioCtx.createMediaElementSource(audio);
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
+const smoothArray = new Float32Array(bufferLength);
+
+// Logo
+const logo = new Image();
+logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
+
+// Start click
+const startText = document.getElementById('startText');
+startText.addEventListener("click", ()=>{
+    audioCtx.resume().then(()=>{
+        startText.style.display="none";
+        document.body.style.cursor="none";
+        playTrack(currentTrack);
     });
+});
 
-    prevBtn.addEventListener("click", playPrev);
-    nextBtn.addEventListener("click", playNext);
-    shuffleBtn.addEventListener("click", () => isShuffle = !isShuffle);
-    repeatBtn.addEventListener("click", () => isRepeat = !isRepeat);
+// Keyboard & Media Keys
+window.addEventListener('keydown', e=>{
+    if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
+    if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
+    if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
+});
+if('mediaSession' in navigator){
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
+    navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+    navigator.mediaSession.setActionHandler('play', ()=>audio.play());
+}
 
-    // Auto load first track
-    loadTrack(0);
-  </script>
+// Visualizer parameters
+const actualBars = 15000;
+const maxFreq = 1200;
+
+// Draw loop
+function draw(){
+    requestAnimationFrame(draw);
+
+    const centerX = canvas.width/2;
+    const centerY = canvas.height/2;
+    const logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+    let logoRadius;
+
+    analyser.getByteFrequencyData(dataArray);
+    for(let i=0;i<bufferLength;i++){
+        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
+    }
+
+    // Fade effect
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Compute bass average
+    let bassSum = 0;
+    const bassLimit = 60;
+    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
+    const bassAvg = bassSum / bassLimit;
+
+    // Logo radius reactive
+    const minLogo = logoBaseRadius;
+    const maxLogo = logoBaseRadius*1.5;
+    logoRadius = minLogo + (bassAvg/255)*(maxLogo-minLogo);
+
+    const hueShift = Date.now()*0.02;
+
+    // Draw bars
+    for(let i=0;i<actualBars;i++){
+        const angle = (i/actualBars)*Math.PI*2;
+        const freqIndex = Math.floor((i/actualBars)*maxFreq);
+        const spike = (smoothArray[freqIndex]/255)*Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
+
+        const x1 = centerX + Math.cos(angle)*logoRadius;
+        const y1 = centerY + Math.sin(angle)*logoRadius;
+        const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
+        const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
+
+        const hue = (i*360/actualBars + hueShift)%360;
+        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+        ctx.lineWidth = 0.35;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(x2,y2);
+        ctx.stroke();
+    }
+
+    // Draw logo
+    if(logo.complete){
+        const size = logoRadius*2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
+        ctx.restore();
+    }
+}
+
+draw();
+</script>
 </body>
 </html>
