@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Spikes with Media Keys</title>
+<title>Radial Spikes Visualizer with Logo Pulse</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -79,7 +79,7 @@ startText.addEventListener("click", ()=>{
 });
 
 const actualBars = 15000;
-const maxFreq = 1200; // Limit to first 250 frequency bins
+const maxFreq = 1200; // use first 1200 frequency bins
 
 // Media keys support
 window.addEventListener('keydown', (e)=>{
@@ -95,10 +95,15 @@ function draw(){
         smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
 
-    // Overall bass/beat from first 250 bins
+    // Compute overall bass for logo pulse
     let bassSum = 0;
     for(let i=0;i<maxFreq;i++) bassSum += smoothArray[i];
     const bassAvg = bassSum / Math.max(1,maxFreq);
+
+    // Dynamic logo size
+    const minLogo = logoBaseRadius;
+    const maxLogo = logoBaseRadius*1.5;
+    logoRadius = minLogo + (bassAvg/255) * (maxLogo - minLogo);
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
