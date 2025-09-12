@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Visualizer with Logo Pulse & Fade + Auto Resize</title>
+<title>Radial Visualizer with Auto-Resize</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -25,13 +25,9 @@ const ctx = canvas.getContext('2d');
 const audio = document.getElementById('player');
 const startText = document.getElementById('startText');
 
-let centerX, centerY, logoBaseRadius, logoRadius;
 function resizeCanvas(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    centerX = canvas.width / 2;
-    centerY = canvas.height / 2;
-    logoBaseRadius = Math.min(canvas.width, canvas.height) * 0.12;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -89,6 +85,13 @@ window.addEventListener('keydown', (e)=>{
 
 function draw(){
     requestAnimationFrame(draw);
+
+    // Update center and logo radius dynamically
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const logoBaseRadius = Math.min(canvas.width, canvas.height) * 0.12;
+    let logoRadius;
+
     analyser.getByteFrequencyData(dataArray);
 
     // Smooth frequencies
@@ -96,17 +99,17 @@ function draw(){
         smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
 
-    // Fade effect for bars
+    // Fade effect
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Compute bass average for logo pulse
+    // Compute bass average
     let bassSum = 0;
     const bassLimit = 60;
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
     const bassAvg = bassSum / bassLimit;
 
-    // Dynamic logo radius
+    // Logo radius
     const minLogo = logoBaseRadius;
     const maxLogo = logoBaseRadius * 1.5;
     logoRadius = minLogo + (bassAvg/255) * (maxLogo - minLogo);
