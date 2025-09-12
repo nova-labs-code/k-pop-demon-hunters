@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Reactive 15k-Bar Visualizer</title>
+<title>Smooth 15k-Bar Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -92,39 +92,42 @@ startText.addEventListener("click", ()=>{
     });
 });
 
+const actualBars = 15000;
+
 // Draw
 function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
+    // Smooth frequencies
     for(let i=0;i<bufferLength;i++){
-        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3; // faster response
+        smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
     }
 
-    // Bass-based logo pulse
+    // Bass pulse
     let bassSum = 0;
     const bassLimit = Math.floor(200*bufferLength/22050);
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
     const bassAvg = bassSum / Math.max(1,bassLimit);
-    logoRadius = logoBaseRadius + bassAvg*0.6; // stronger pulse
+    logoRadius = logoBaseRadius + bassAvg*0.6;
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const actualBars = 15000;
     const hueShift = Date.now()*0.02;
+    const wavePhase = Math.sin(Date.now()*0.002)*0.05;
 
     for(let i=0;i<actualBars;i++){
         const logIndex = Math.floor(Math.pow(i/actualBars,0.4)*bufferLength);
         const value = smoothArray[logIndex] || 0;
-        let spike = Math.pow(value/255,1.5) * Math.min(canvas.width,canvas.height)*0.2;
-        spike += Math.random()*0.05*Math.min(canvas.width,canvas.height); // jitter
-        const baseAngle = (i/actualBars)*Math.PI*2;
-        const waveOffset = Math.sin(Date.now()*0.002+i*0.004)*0.05;
-        const angle = baseAngle + waveOffset;
+        const spike = Math.pow(value/255,1.4) * Math.min(canvas.width,canvas.height)*0.18;
+
+        const angle = (i/actualBars)*Math.PI*2 + wavePhase;
+
         const x1 = centerX + Math.cos(angle)*logoRadius;
         const y1 = centerY + Math.sin(angle)*logoRadius;
         const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
         const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
+
         const hue = (i*360/actualBars+hueShift)%360;
         ctx.strokeStyle = `hsl(${hue},100%,50%)`;
         ctx.lineWidth = 0.35;
