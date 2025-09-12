@@ -102,7 +102,7 @@ function updateTabTitle(url){
     document.title = `KPDH - ${name}`;
 }
 
-// Media Session API
+// Media Session API with BVPSites as app
 function updateMediaSession(url){
     const name = trackNames[url.split('/').pop()] || "Unknown Song";
     if('mediaSession' in navigator){
@@ -114,6 +114,12 @@ function updateMediaSession(url){
                 { src: 'https://bvp.neocities.org/roblox%20pfp.png', sizes: '512x512', type: 'image/png' }
             ]
         });
+        navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
+        navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
+        navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+        navigator.mediaSession.setActionHandler('play', ()=>audio.play());
+        // App name shown on media overlays
+        navigator.mediaSession.metadata.app = "BVPSites";
     }
 }
 
@@ -163,12 +169,6 @@ window.addEventListener('keydown', e=>{
     if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
     if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
 });
-if('mediaSession' in navigator){
-    navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
-    navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
-    navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
-    navigator.mediaSession.setActionHandler('play', ()=>audio.play());
-}
 
 // Visualizer
 const actualBars = 15000;
