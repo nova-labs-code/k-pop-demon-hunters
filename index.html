@@ -48,7 +48,7 @@ const trackNames = {
   "song9.mp3":"How It's Done (Sing-Along)",
   "song10.mp3":"How It's Done",
   "song11.mp3":"Takedown (Acapella)",
-  "song12.mp3":"Takedown (Instrumental)",
+  "song12.3":"Takedown (Instrumental)",
   "song13.mp3":"Takedown (Sing-Along)",
   "song14.mp3":"Takedown",
   "song15.mp3":"What It Sounds Like (Acapella)",
@@ -102,14 +102,14 @@ function updateTabTitle(url){
     document.title = `KPDH - ${name}`;
 }
 
-// Media Session API with BVPSites as app
+// Media Session API for your app
 function updateMediaSession(url){
     const name = trackNames[url.split('/').pop()] || "Unknown Song";
     if('mediaSession' in navigator){
         navigator.mediaSession.metadata = new MediaMetadata({
             title: name,
-            artist: 'K-Pop Demon Hunters',
-            album: 'KPDH Playlist',
+            artist: 'Netflix', // Sets the artist name for the track to "Netflix"
+            album: 'KPDH Playlist',      // Sets the album name for the track
             artwork: [
                 { src: 'https://bvp.neocities.org/roblox%20pfp.png', sizes: '512x512', type: 'image/png' }
             ]
@@ -118,8 +118,6 @@ function updateMediaSession(url){
         navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
         navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
         navigator.mediaSession.setActionHandler('play', ()=>audio.play());
-        // App name shown on media overlays
-        navigator.mediaSession.metadata.artist = "Netflix";
     }
 }
 
