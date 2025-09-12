@@ -1,263 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>K-Pop Demon Hunters</title>
-<style>
-  html,body { margin:0; padding:0; height:100%; background:#000; cursor:pointer; overflow:hidden; }
-  canvas { display:block; width:100%; height:100%; }
-  #startText{
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    color:#fff; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; font-size:48px;
-    background:rgba(0,0,0,0.85); z-index:9999; user-select:none;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K-Pop Demon Hunters</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    audio {
+      width: 80%;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
-  <div id="startText">Click to Start</div>
-  <audio id="player" type="audio/mpeg"></audio>
-  <canvas id="canvas"></canvas>
+  <div>
+    <audio id="player" controls></audio>
+    <div>
+      <button id="prevBtn">Prev</button>
+      <button id="nextBtn">Next</button>
+      <button id="shuffleBtn">Shuffle</button>
+      <button id="repeatBtn">Repeat</button>
+    </div>
+  </div>
 
-<script>
-// -------------------- CONFIG --------------------
-const BASE_URL = 'https://dev-bvp.github.io/k-pop-demon-hunters/';
-const TRACK_COUNT = 50;
-const actualBars = 15000;   // 15k bars
-const maxFreq = 1200;       // first 1200 frequency bins used
-// ------------------------------------------------
+  <script>
+    const playlist = [
+      "Soda Pop (HUNTR/X Version)",
+      "How It's Done (KPOP DEMON HUNTERS METAL COVER)",
+      "Golden (Acapella)",
+      "Golden (Instrumental)",
+      "Golden (Sing-Along)",
+      "Golden",
+      "How It's Done (Acapella)",
+      "How It's Done (Instrumental)",
+      "How It's Done (Sing-Along)",
+      "How It's Done",
+      "Takedown (Acapella)",
+      "Takedown (Instrumental)",
+      "Takedown (Sing-Along)",
+      "Takedown",
+      "What It Sounds Like (Acapella)",
+      "What It Sounds Like (Instrumental)",
+      "What It Sounds Like (Sing-Along)",
+      "What It Sounds Like",
+      "Soda Pop (Cover)",
+      "Jinu's Lament",
+      "오솔길 Path",
+      "Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
+      "Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
+      "Your Idol - KPop Demon Hunters - Acoustic Cover",
+      "Prolouge (Hunter's Mantra)",
+      "Score Suite",
+      "Face Your Demons (Rumi Villain Song)",
+      "Your Idol (Huntrix Version)",
+      "Golden Cover (Rain Paris)",
+      "Free (Acapella)",
+      "Free (Instrumental)",
+      "Free (Sing-Along)",
+      "Free",
+      "Soda Pop (Acapella)",
+      "Soda Pop (Instrumental)",
+      "Soda Pop (Sing-Along)",
+      "Soda Pop",
+      "Your Idol (Acapella)",
+      "Your Idol (Instrumental)",
+      "Your Idol (Sing-Along)",
+      "Your Idol",
+      "Huntrix - Takedown (Singing Cover)",
+      "KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
+      "What it sounds like (acoustic)",
+      "Strategy",
+      "TAKEDOWN",
+      "Monst3r - Rumi (K-Pop Demon Hunters)",
+      "Takedown - Saja Boys (Demon Boy Cut)",
+      "사랑인가 봐 Love, Maybe",
+      "Golden (Acoustic Cover)"
+    ];
 
-// build playlist URLs
-const tracks = [];
-for(let i=1;i<=TRACK_COUNT;i++) tracks.push(`${BASE_URL}song${i}.mp3`);
+    const player = document.getElementById("player");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const repeatBtn = document.getElementById("repeatBtn");
 
-// map filenames to the real song names you provided
-const trackNames = {
- "song1.mp3":"Soda Pop (HUNTR/X Version)",
- "song2.mp3":"How It's Done (KPOP DEMON HUNTERS METAL COVER)",
- "song3.mp3":"Golden (Acapella)",
- "song4.mp3":"Golden (Instrumental)",
- "song5.mp3":"Golden (Sing-Along)",
- "song6.mp3":"Golden",
- "song7.mp3":"How It's Done (Acapella)",
- "song8.mp3":"How It's Done (Instrumental)",
- "song9.mp3":"How It's Done (Sing-Along)",
- "song10.mp3":"How It's Done",
- "song11.mp3":"Takedown (Acapella)",
- "song12.mp3":"Takedown (Instrumental)",
- "song13.mp3":"Takedown (Sing-Along)",
- "song14.mp3":"Takedown",
- "song15.mp3":"What It Sounds Like (Acapella)",
- "song16.mp3":"What It Sounds Like (Instrumental)",
- "song17.mp3":"What It Sounds Like (Sing-Along)",
- "song18.mp3":"What It Sounds Like",
- "song19.mp3":"Soda Pop (Cover)",
- "song20.mp3":"Jinu's Lament",
- "song21.mp3":"오솔길 Path",
- "song22.mp3":"Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
- "song23.mp3":"Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
- "song24.mp3":"Your Idol - KPop Demon Hunters - Acoustic Cover",
- "song25.mp3":"Prolouge (Hunter's Mantra)",
- "song26.mp3":"Score Suite",
- "song27.mp3":"Face Your Demons (Rumi Villain Song)",
- "song28.mp3":"Your Idol (Huntrix Version)",
- "song29.mp3":"Golden Cover (Rain Paris)",
- "song30.mp3":"Free (Acapella)",
- "song31.mp3":"Free (Instrumental)",
- "song32.mp3":"Free (Sing-Along)",
- "song33.mp3":"Free",
- "song34.mp3":"Soda Pop (Acapella)",
- "song35.mp3":"Soda Pop (Instrumental)",
- "song36.mp3":"Soda Pop (Sing-Along)",
- "song37.mp3":"Soda Pop",
- "song38.mp3":"Your Idol (Acapella)",
- "song39.mp3":"Your Idol (Instrumental)",
- "song40.mp3":"Your Idol (Sing-Along)",
- "song41.mp3":"Your Idol",
- "song42.mp3":"Huntrix - Takedown (Singing Cover)",
- "song43.mp3":"KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
- "song44.mp3":"What it sounds like (acoustic)",
- "song45.mp3":"Strategy",
- "song46.mp3":"TAKEDOWN",
- "song47.mp3":"Monst3r - Rumi (K-Pop Demon Hunters)",
- "song48.mp3":"Takedown - Saja Boys (Demon Boy Cut)",
- "song49.mp3":"사랑인가 봐 Love, Maybe",
- "song50.mp3":"Golden (Acoustic Cover)"
-};
+    let currentTrack = 0;
+    let isShuffle = false;
+    let isRepeat = false;
 
-// optional: shuffle playlist for variety (uncomment to shuffle)
-// shuffle(tracks);
+    function loadTrack(index) {
+      currentTrack = index;
+      player.src = `https://dev-bvp.github.io/k-pop-demon-hunters/song${index+1}-50.mp3`;
+      player.play();
 
-// -------------------- DOM --------------------
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const audio = document.getElementById('player');
-const startText = document.getElementById('startText');
+      // Update Media Session metadata
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: playlist[index],
+          artist: "K-Pop Demon Hunters",
+          album: "KPDH OST",
+          artwork: [
+            { src: "https://bvp.neocities.org/roblox%20pfp.png", sizes: "512x512", type: "image/png" }
+          ]
+        });
 
-// resize helper
-function resizeCanvas(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+        navigator.mediaSession.setActionHandler("previoustrack", () => {
+          playPrev();
+        });
 
-// -------------------- PLAYLIST CONTROL --------------------
-let currentTrack = 0;
-function updateTabTitle(url){
-  const name = trackNames[url.split('/').pop()] || "Unknown Song";
-  document.title = `KPDH - ${name}`;
-}
-function updateMediaSession(url){
-  const name = trackNames[url.split('/').pop()] || "Unknown Song";
-  if('mediaSession' in navigator){
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: name,
-      artist: 'K-Pop Demon Hunters',
-      album: 'KPDH Playlist',
-      artwork: [
-        { src: 'https://bvp.neocities.org/roblox%20pfp.png', sizes:'512x512', type:'image/png' }
-      ]
+        navigator.mediaSession.setActionHandler("nexttrack", () => {
+          playNext();
+        });
+      }
+
+      // Update tab title
+      document.title = "KPDH - " + playlist[index];
+    }
+
+    function playNext() {
+      if (isShuffle) {
+        loadTrack(Math.floor(Math.random() * playlist.length));
+      } else if (currentTrack < playlist.length - 1) {
+        loadTrack(currentTrack + 1);
+      } else if (isRepeat) {
+        loadTrack(0);
+      }
+    }
+
+    function playPrev() {
+      if (isShuffle) {
+        loadTrack(Math.floor(Math.random() * playlist.length));
+      } else if (currentTrack > 0) {
+        loadTrack(currentTrack - 1);
+      } else if (isRepeat) {
+        loadTrack(playlist.length - 1);
+      }
+    }
+
+    player.addEventListener("ended", () => {
+      playNext();
     });
-  }
-}
-function playTrack(index){
-  if(tracks.length===0) return;
-  if(index < 0) index = tracks.length - 1;
-  if(index >= tracks.length) index = 0;
-  currentTrack = index;
-  audio.src = tracks[currentTrack];
-  updateTabTitle(tracks[currentTrack]);
-  updateMediaSession(tracks[currentTrack]);
-  audio.play().catch(e=>console.warn("Play error:", e));
-}
-audio.addEventListener('ended', ()=> playTrack(currentTrack+1) );
 
-// keyboard media keys + simple keys
-window.addEventListener('keydown', (e)=>{
-  if(e.code === 'MediaTrackNext') playTrack(currentTrack+1);
-  if(e.code === 'MediaTrackPrevious') playTrack(currentTrack-1);
-  if(e.code === 'Space') { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
-});
+    prevBtn.addEventListener("click", playPrev);
+    nextBtn.addEventListener("click", playNext);
+    shuffleBtn.addEventListener("click", () => isShuffle = !isShuffle);
+    repeatBtn.addEventListener("click", () => isRepeat = !isRepeat);
 
-// media session handlers for Bluetooth / OS
-if('mediaSession' in navigator){
-  navigator.mediaSession.setActionHandler('nexttrack', ()=> playTrack(currentTrack+1));
-  navigator.mediaSession.setActionHandler('previoustrack', ()=> playTrack(currentTrack-1));
-  navigator.mediaSession.setActionHandler('play', ()=> audio.play());
-  navigator.mediaSession.setActionHandler('pause', ()=> audio.pause());
-}
-
-// click to start (required on many browsers to unlock AudioContext)
-startText.addEventListener('click', ()=>{
-  if(!audio) return;
-  // resume audio context then start
-  (async ()=> {
-    try{
-      await (window.AudioContext ? new window.AudioContext().resume() : Promise.resolve());
-    }catch(e){}
-    // ensure our audio context (created below) is in a running state:
-    audioCtx.resume().catch(()=>{});
-    startText.style.display = 'none';
-    document.body.style.cursor = 'none';
-    playTrack(currentTrack);
-  })();
-});
-
-// -------------------- Web Audio Visualizer --------------------
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768; // large fft for many bins
-const source = audioCtx.createMediaElementSource(audio);
-source.connect(analyser);
-analyser.connect(audioCtx.destination);
-
-const bufferLength = analyser.frequencyBinCount; // fftSize/2
-const dataArray = new Uint8Array(bufferLength);
-const smoothArray = new Float32Array(bufferLength);
-
-// main draw loop
-function draw(){
-  requestAnimationFrame(draw);
-
-  // keep centered and responsive (recompute each frame)
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
-  const logoBaseRadius = Math.min(canvas.width, canvas.height) * 0.12;
-  let logoRadius;
-
-  analyser.getByteFrequencyData(dataArray);
-  // smooth the spectrum to avoid jitter
-  for(let i=0;i<bufferLength;i++){
-    smoothArray[i] = smoothArray[i] * 0.7 + dataArray[i] * 0.3;
-  }
-
-  // fade overlay for trailing bars
-  ctx.fillStyle = 'rgba(0,0,0,0.15)'; // tweak alpha for longer/shorter trails
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // compute bass average from first N bins (low freq)
-  let bassSum = 0;
-  const bassLimit = Math.min(60, bufferLength);
-  for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
-  const bassAvg = bassSum / bassLimit;
-
-  // logo pulse
-  const minLogo = logoBaseRadius;
-  const maxLogo = logoBaseRadius * 1.5;
-  logoRadius = minLogo + (bassAvg/255) * (maxLogo - minLogo);
-
-  // color sweep
-  const hueShift = Date.now() * 0.02;
-
-  // draw bars (each bar maps to a freq bin within maxFreq)
-  for(let i=0;i<actualBars;i++){
-    const angle = (i / actualBars) * Math.PI * 2;
-    const freqIndex = Math.floor((i / actualBars) * maxFreq);
-    const val = smoothArray[freqIndex] || 0;
-    const spike = (val / 255) * Math.min(canvas.width, canvas.height) * 0.18 + bassAvg * 0.15;
-
-    const x1 = centerX + Math.cos(angle) * logoRadius;
-    const y1 = centerY + Math.sin(angle) * logoRadius;
-    const x2 = centerX + Math.cos(angle) * (logoRadius + spike);
-    const y2 = centerY + Math.sin(angle) * (logoRadius + spike);
-
-    const hue = (i * 360 / actualBars + hueShift) % 360;
-    ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-    ctx.lineWidth = 0.35;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-  }
-
-  // draw logo clipped in center
-  if(logo.complete){
-    const size = logoRadius * 2;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, logoRadius, 0, Math.PI*2);
-    ctx.clip();
-    ctx.drawImage(logo, centerX - logoRadius, centerY - logoRadius, size, size);
-    ctx.restore();
-  }
-}
-
-// preload logo image used in Media Session & center
-const logo = new Image();
-logo.crossOrigin = 'anonymous';
-logo.src = 'https://bvp.neocities.org/roblox%20pfp.png';
-
-// start drawing
-draw();
-
-// -------------------- small helpers --------------------
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
-  }
-}
-</script>
+    // Auto load first track
+    loadTrack(0);
+  </script>
 </body>
 </html>
