@@ -107,7 +107,7 @@ function updateMediaSession(url){
     const name = trackNames[url.split('/').pop()] || "Unknown Song";
     if('mediaSession' in navigator){
         navigator.mediaSession.metadata = new MediaMetadata({
-            title: name,
+            title: BVP,
             artist: 'K-Pop Demon Hunters',
             album: 'KPDH Playlist',
             artwork: [
