@@ -1,160 +1,348 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>YouTube-Style Visualizer with Logo Pulse</title>
+<meta charset="utf-8" />
+<title>Next-Level YouTube-Style Visualizer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
-canvas { display:block; }
-#startText {
-  position: fixed; top:0; left:0; right:0; bottom:0;
-  display:flex; justify-content:center; align-items:center;
-  color:white; font-size:48px; font-family:sans-serif;
-  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
-  cursor:pointer;
-}
+  html,body{height:100%;margin:0;background:#000;overflow:hidden}
+  canvas{display:block}
+  #startText{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.85);color:#fff;font-family:Inter,system-ui,Arial;
+    font-size:48px;z-index:9999;cursor:pointer;user-select:none
+  }
+  /* small accessibility for keyboard users */
+  #startText:focus{outline:3px solid rgba(255,255,255,0.2)}
 </style>
 </head>
 <body>
-<div id="startText">Click to Start</div>
-<audio id="player" type="audio/mpeg"></audio>
-<canvas id="canvas"></canvas>
+  <div id="startText" tabindex="0">Click to Start</div>
+  <audio id="player" crossorigin="anonymous"></audio>
+  <canvas id="canvas"></canvas>
+
 <script>
+/* =========================
+   CONFIG
+   ========================= */
+const FFT_SIZE = 32768;            // max allowed
+const ACTUAL_BARS = 15000;        // computed bars per layer (reduce if slow)
+const LAYERS = 2;                 // layers to simulate higher density
+const SMOOTH_DECAY = 0.82;        // smoothing factor for frequency smoothing
+const LOG_POWER = 0.5;            // lower = more bass spread
+const TRAIL_ALPHA = 0.12;         // how strong the motion trail is (0-1)
+const BASE_LOGO_RATIO = 0.12;     // fraction of min(width,height)
+const BAR_SCALE = 0.12;           // global bar scale factor
+const MIRROR_OPPOSITE = true;     // draw mirrored bar opposite (dynamic symmetry)
+const BAND_SPLIT_COUNT = 4;       // number of bands (bass/low-mid/high-mid/treble)
+
+/* =========================
+   DOM + CANVAS
+   ========================= */
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: true });
 const audio = document.getElementById('player');
 const startText = document.getElementById('startText');
 
-function resizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  centerX = canvas.width/2;
+  centerY = canvas.height/2;
+  logoBaseRadius = Math.min(canvas.width, canvas.height) * BASE_LOGO_RATIO;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+window.addEventListener('resize', resize);
+resize();
 
 let centerX = canvas.width/2, centerY = canvas.height/2;
-let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+let logoBaseRadius = Math.min(canvas.width, canvas.height) * BASE_LOGO_RATIO;
 let logoRadius = logoBaseRadius;
-window.addEventListener('resize', ()=>{
-    centerX = canvas.width/2;
-    centerY = canvas.height/2;
-    logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
-    logoRadius = logoBaseRadius;
-});
 
-// Playlist
-const maxTracks = 50;
+/* =========================
+   Playlist (shuffle) - your hosted files
+   ========================= */
+const MAX_TRACKS = 50;
 let tracks = [];
-for(let i=1;i<=maxTracks;i++) tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
+for (let i=1;i<=MAX_TRACKS;i++){
+  tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
+}
 shuffle(tracks);
-
 let currentTrack = 0;
-function playTrack(index){
-    if(tracks.length===0) return;
-    if(index<0) index = tracks.length-1;
-    if(index>=tracks.length) index = 0;
-    currentTrack = index;
-    audio.src = tracks[currentTrack];
-    audio.play().catch(e=>console.log("Play error:", e));
+function shuffle(a){
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
 }
-audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
-function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 
-// Media keys
+/* =========================
+   Media keys (Media Session API)
+   ========================= */
 if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
-    navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
-    navigator.mediaSession.setActionHandler('play', ()=>audio.play());
-    navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+  navigator.mediaSession.setActionHandler('previoustrack', ()=> playTrack(currentTrack-1) );
+  navigator.mediaSession.setActionHandler('nexttrack', ()=> playTrack(currentTrack+1) );
+  navigator.mediaSession.setActionHandler('play', ()=> audio.play() );
+  navigator.mediaSession.setActionHandler('pause', ()=> audio.pause() );
 }
 
-// Web Audio
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+/* =========================
+   WebAudio setup
+   ========================= */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768;
+analyser.fftSize = FFT_SIZE; // 32768
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
-const bufferLength = analyser.frequencyBinCount;
-const dataArray = new Uint8Array(bufferLength);
-const smoothArray = new Float32Array(bufferLength);
 
-// Logo
+const bufferLength = analyser.frequencyBinCount; // FFT_SIZE/2
+const rawFrequency = new Uint8Array(bufferLength);
+const smoothFrequency = new Float32Array(bufferLength);
+
+/* =========================
+   Logo image
+   ========================= */
 const logo = new Image();
+logo.crossOrigin = 'anonymous';
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
 
-// Start
-startText.addEventListener("click", ()=>{
-    audioCtx.resume().then(()=>{
-        startText.style.display="none";
-        document.body.style.cursor="none";
-        playTrack(currentTrack);
-    });
-});
+/* =========================
+   Helper: play track
+   ========================= */
+function playTrack(index){
+  if (!tracks.length) return;
+  if (index < 0) index = tracks.length - 1;
+  if (index >= tracks.length) index = 0;
+  currentTrack = index;
+  audio.src = tracks[currentTrack];
+  audio.play().catch(e=>console.warn("play failed:",e));
+}
+audio.addEventListener('ended', ()=> playTrack(currentTrack+1));
 
-// Draw
-function draw(){
-    requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(dataArray);
+/* =========================
+   Start click handling (robust)
+   ========================= */
+startText.addEventListener('click', startHandler);
+startText.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') startHandler(); });
 
-    // Smooth
-    for(let i=0;i<bufferLength;i++){
-        smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
-    }
-
-    // Calculate bass for logo pulse (0-200Hz)
-    let bassSum = 0;
-    for(let i=0;i<Math.floor(200*bufferLength/22050);i++){
-        bassSum += smoothArray[i];
-    }
-    let bassAvg = bassSum / Math.max(1, Math.floor(200*bufferLength/22050));
-    logoRadius = logoBaseRadius + bassAvg*0.2; // pulse factor
-
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    const actualBars = 25000; // computed bars
-    const layers = 2; // simulate 50k
-    const hueShift = Date.now()*0.02;
-
-    for(let l=0;l<layers;l++){
-        for(let i=0;i<actualBars;i++){
-            const logIndex = Math.floor(Math.pow(i/actualBars,0.5)*bufferLength);
-            const value = smoothArray[logIndex] || 0;
-            const spike = Math.pow(value/255,2) * Math.min(canvas.width,canvas.height)*0.125;
-
-            let baseAngle = (i/actualBars)*Math.PI*2;
-            const waveOffset = Math.sin(Date.now()*0.002+i*0.005 + l*0.01)*0.05;
-            const angle = baseAngle + waveOffset;
-            const barLength = Math.max(2,spike);
-
-            const x1 = centerX + Math.cos(angle)*logoRadius;
-            const y1 = centerY + Math.sin(angle)*logoRadius;
-            const x2 = centerX + Math.cos(angle)*(logoRadius+barLength);
-            const y2 = centerY + Math.sin(angle)*(logoRadius+barLength);
-
-            const hue = (i*360/actualBars+hueShift + l*10)%360;
-            ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-            ctx.lineWidth = 0.3;
-            ctx.beginPath();
-            ctx.moveTo(x1,y1);
-            ctx.lineTo(x2,y2);
-            ctx.stroke();
-        }
-    }
-
-    // Draw logo
-    if(logo.complete){
-        const size = logoRadius*2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
-        ctx.clip();
-        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
-        ctx.restore();
-    }
+function startHandler(){
+  // ensure first track is set at click time
+  if (!audio.src) {
+    audio.src = tracks[currentTrack] || '';
+  }
+  audioCtx.resume().then(()=>{
+    startText.style.display = 'none';
+    document.body.style.cursor = 'none';
+    playTrack(currentTrack); // play immediately
+  }).catch(err => {
+    console.error("Audio resume error:", err);
+  });
 }
 
-draw();
+/* =========================
+   Frequency band helpers
+   =========================
+   We'll define four bands with approximate ranges (in Hz).
+   We need to map FFT bins to frequencies: binFreq = (i * sampleRate) / fftSize
+   sampleRate typically 44100 or 48000. Use audioCtx.sampleRate.
+*/
+const sampleRate = audioCtx.sampleRate || 44100;
+function binToFreq(binIndex){ return binIndex * sampleRate / (FFT_SIZE); }
+
+/* Define bands (change as desired) */
+const BANDS = [
+  { name:'bass',    low:20,    high:200 },    // big slow stuff
+  { name:'lowmid',  low:200,   high:1000 },   // body
+  { name:'highmid', low:1000,  high:5000 },   // clarity
+  { name:'treble',  low:5000,  high: sampleRate/2 } // air
+];
+
+/* Precompute band index ranges */
+const bandRanges = BANDS.map(b=>{
+  const start = Math.floor(b.low * FFT_SIZE / sampleRate);
+  const end   = Math.min(bufferLength-1, Math.ceil(b.high * FFT_SIZE / sampleRate));
+  return { start, end };
+});
+
+/* =========================
+   Rendering variables
+   ========================= */
+const actualBars = ACTUAL_BARS; // computed bars per layer
+const layers = LAYERS;
+let lastTime = performance.now();
+
+/* =========================
+   Visual helpers to make bars "next-level"
+   ========================= */
+function getBandEnergy(bandIdx){
+  const range = bandRanges[bandIdx];
+  let sum = 0, count = 0;
+  for (let i = range.start; i <= range.end; i++){
+    sum += smoothFrequency[i] || 0;
+    count++;
+  }
+  return count ? (sum / count) : 0;
+}
+
+/* precompute small arrays to avoid allocations in loop */
+const twoPi = Math.PI * 2;
+
+/* =========================
+   DRAW LOOP
+   ========================= */
+function draw(){
+  requestAnimationFrame(draw);
+  analyser.getByteFrequencyData(rawFrequency);
+
+  // smoothing/decay
+  for (let i=0;i<bufferLength;i++){
+    smoothFrequency[i] = smoothFrequency[i] * SMOOTH_DECAY + rawFrequency[i] * (1 - SMOOTH_DECAY);
+  }
+
+  // compute band energies for targeted behavior
+  const bandEnergies = [];
+  for (let b=0;b<bandRanges.length;b++){
+    bandEnergies[b] = getBandEnergy(b);
+  }
+
+  // low-frequency warp (global radius modulation)
+  const bassEnergy = bandEnergies[0] / 255; // normalized 0..1
+  const warpAmount = 1 + bassEnergy * 0.18; // subtle expansion
+  const currentLogoRadius = logoBaseRadius * warpAmount;
+
+  // logo pulse: also used to start bars from edge
+  const logoPulse = logoBaseRadius + (bandEnergies[0] * 0.12);
+
+  // trails: draw translucent black rectangle to fade previous frame
+  ctx.fillStyle = `rgba(0,0,0,${TRAIL_ALPHA})`;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // set some drawing defaults
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const hueShift = performance.now() * 0.02;
+
+  // Iterate layers to simulate density (each layer slightly offset)
+  for (let L = 0; L < layers; L++){
+    // micro-offset per layer
+    const layerOffset = (L / layers) * 0.002 * twoPi;
+
+    // We will map i:[0..actualBars-1] via log mapping into frequency bins
+    for (let i=0; i<actualBars; i++){
+      // logarithmic index mapping (more room for bass)
+      const t = i / actualBars;
+      const logIndex = Math.floor(Math.pow(t, LOG_POWER) * (bufferLength - 1));
+      const val = smoothFrequency[logIndex] || 0;
+
+      // amplify different frequency bands differently depending on where this bar sits
+      // we pick which band this bar belongs to by its angular quarter:
+      const angleBase = t * twoPi;
+      // map angle to band: split circle into 4 equal slices -> band mapping
+      const bandIndex = Math.floor((angleBase / twoPi) * BAND_SPLIT_COUNT) % BAND_SPLIT_COUNT;
+
+      // Band-specific multipliers and thickness
+      let bandMultiplier = 1;
+      let lineThickness = 0.25; // base
+      switch (bandIndex){
+        case 0: // bass region
+          bandMultiplier = 1.6;
+          lineThickness = 0.9;
+          break;
+        case 1: // low-mid
+          bandMultiplier = 1.2;
+          lineThickness = 0.5;
+          break;
+        case 2: // high-mid
+          bandMultiplier = 1.0;
+          lineThickness = 0.35;
+          break;
+        default: // treble
+          bandMultiplier = 0.8;
+          lineThickness = 0.2;
+          break;
+      }
+
+      // value scaling and spike shaping
+      const amp = Math.pow(val / 255, 1.8); // compress then expand for visual snappiness
+      const spike = amp * Math.min(canvas.width, canvas.height) * BAR_SCALE * bandMultiplier;
+
+      // sine-based wobble for organic motion (use small offsets)
+      const wobble = Math.sin(performance.now() * 0.001 + i * 0.003 + L*0.01) * (0.06 + amp*0.06);
+
+      const angle = angleBase + wobble + layerOffset;
+      const innerR = currentLogoRadius;
+      const outerR = innerR + Math.max(2, spike);
+
+      // color and glow based on amplitude
+      const hue = (i * 360 / actualBars + hueShift + L*6) % 360;
+      const brightness = 30 + amp * 70; // 30%..100%
+      ctx.strokeStyle = `hsl(${hue},100%,${brightness}%)`;
+
+      // dynamic glow: stronger for bass and larger amplitude
+      const glow = Math.min(40, 2 + amp * 60 * (bandIndex===0 ? 1.6 : 1));
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = `hsla(${hue},100%,${brightness}%,0.9)`;
+
+      // thickness scaled by band and amplitude
+      ctx.lineWidth = Math.max(0.15, lineThickness * (0.3 + amp*1.6));
+
+      // draw bar
+      const x1 = centerX + Math.cos(angle) * innerR;
+      const y1 = centerY + Math.sin(angle) * innerR;
+      const x2 = centerX + Math.cos(angle) * outerR;
+      const y2 = centerY + Math.sin(angle) * outerR;
+
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+
+      // mirrored pair for symmetry (optional)
+      if (MIRROR_OPPOSITE){
+        const angleOpp = angle + Math.PI;
+        const x1o = centerX + Math.cos(angleOpp) * innerR;
+        const y1o = centerY + Math.sin(angleOpp) * innerR;
+        const x2o = centerX + Math.cos(angleOpp) * (innerR + Math.max(1, spike * 0.99));
+        const y2o = centerY + Math.sin(angleOpp) * (innerR + Math.max(1, spike * 0.99));
+        // slightly dimmer mirror
+        ctx.strokeStyle = `hsl(${hue},90%,${Math.max(20, brightness*0.86)}%)`;
+        ctx.beginPath();
+        ctx.moveTo(x1o,y1o);
+        ctx.lineTo(x2o,y2o);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Reset shadow (avoid leaking)
+  ctx.shadowBlur = 0;
+
+  // draw pulsing logo (pulse also on bass)
+  if (logo.complete){
+    // soft white halo behind logo based on bass
+    const haloAlpha = Math.min(0.6, 0.08 + bassEnergy*0.9);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, logoBaseRadius*1.7 + bassEnergy*80, 0, twoPi);
+    ctx.fillStyle = `rgba(255,255,255,${0.01 + bassEnergy*0.03})`;
+    ctx.fill();
+
+    // draw clipped logo
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, logoPulse, 0, twoPi);
+    ctx.clip();
+    ctx.drawImage(logo, centerX - logoPulse, centerY - logoPulse, logoPulse*2, logoPulse*2);
+    ctx.restore();
+  }
+}
+
+/* start the animation */
+requestAnimationFrame(draw);
+
+/* =========================
+   End of file
+   ========================= */
 </script>
 </body>
 </html>
