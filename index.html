@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Spikes Visualizer with Logo Pulse & Fade</title>
+<title>Radial Visualizer with Logo Pulse & Bar Fade</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -79,7 +79,7 @@ startText.addEventListener("click", ()=>{
 });
 
 const actualBars = 15000;
-const maxFreq = 1200; // first 1200 frequency bins for spikes
+const maxFreq = 1200; // first 1200 frequency bins
 
 // Media keys support
 window.addEventListener('keydown', (e)=>{
@@ -97,10 +97,10 @@ function draw(){
     }
 
     // Fade effect for bars
-    ctx.fillStyle = 'rgba(0,0,0,0.2)'; // alpha controls trail length
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'; // lower alpha = longer trail
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Compute bass average for logo pulse (low frequencies)
+    // Compute bass average for logo pulse
     let bassSum = 0;
     const bassLimit = 60;
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
