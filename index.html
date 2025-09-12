@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Edge-Based 15k-Bar Visualizer</title>
+<title>Rhythmic Circle Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -99,7 +99,6 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    // Smooth frequencies
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
     }
@@ -114,19 +113,19 @@ function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const hueShift = Date.now()*0.02;
-    const wavePhase = Math.sin(Date.now()*0.002)*0.05;
+    const t = Date.now()*0.001; // time base
 
     for(let i=0;i<actualBars;i++){
-        // Random frequency mapping for dynamic effect
-        const freqIndex = Math.floor(Math.random()*bufferLength);
+        const angle = (i/actualBars)*Math.PI*2;
+
+        // Instead of random freq, use rhythmic sweeping
+        const sweep = Math.floor(((Math.sin(t*0.7 + i*0.0003)+1)/2) * bufferLength);
+        const freqIndex = (i*4 + sweep) % bufferLength; 
         const value = smoothArray[freqIndex] || 0;
 
-        const spike = Math.pow(value/255,1.4) * Math.min(canvas.width,canvas.height)*0.18;
+        const spike = Math.pow(value/255,1.3) * Math.min(canvas.width,canvas.height)*0.18;
 
-        // Angle evenly around circle
-        const angle = (i/actualBars)*Math.PI*2 + wavePhase;
-
-        // Bars start at the edge of logo
+        // Bar start from logo edge
         const x1 = centerX + Math.cos(angle)*logoRadius;
         const y1 = centerY + Math.sin(angle)*logoRadius;
         const x2 = centerX + Math.cos(angle)*(logoRadius + spike);
