@@ -1,104 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>8K Audio Visualizer</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-    }
-    canvas {
-      display: block;
-    }
-    #startBtn {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 20px 40px;
-      font-size: 24px;
-      background: #fff;
-      color: #000;
-      border: none;
-      cursor: pointer;
-      z-index: 10;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>8K Circle Visualizer</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  canvas { display: block; }
+  #startBtn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 40px;
+    font-size: 24px;
+    background: #fff;
+    color: #000;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+  }
+</style>
 </head>
 <body>
-  <button id="startBtn">Start</button>
-  <canvas id="canvas"></canvas>
+<button id="startBtn">Start</button>
+<canvas id="canvas"></canvas>
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const logoRadius = 150; // circle in the middle
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+let centerX = width/2;
+let centerY = height/2;
+let logoRadius = Math.min(width,height)*0.15;
 
-    const audio = new Audio("song1.mp3"); // change to your audio file
-    audio.crossOrigin = "anonymous";
-    audio.loop = true;
+window.addEventListener("resize", () => {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+  centerX = width/2;
+  centerY = height/2;
+  logoRadius = Math.min(width,height)*0.15;
+});
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaElementSource(audio);
-    const analyser = audioCtx.createAnalyser();
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
+// Logo
+const logo = new Image();
+logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
 
-    analyser.fftSize = 16384; // max safe FFT
-    const bufferLength = analyser.frequencyBinCount; 
-    const dataArray = new Uint8Array(bufferLength);
+// Auto-detect MP3s (assumes server files: song1.mp3 -> song50.mp3)
+const audioFiles = [];
+for(let i=1;i<=50;i++){
+  audioFiles.push(`k-pop-demon-hunters/song${i}.mp3`);
+}
+const shuffled = audioFiles.sort(()=>Math.random()-0.5);
+let currentTrack = 0;
 
-    const bars = 8000; // bars count
-    const angleStep = (Math.PI * 2) / bars;
+const audio = new Audio();
+audio.crossOrigin = "anonymous";
 
-    function draw() {
-      requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+const source = audioCtx.createMediaElementSource(audio);
+const analyser = audioCtx.createAnalyser();
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+// FFT size capped to max safe
+analyser.fftSize = 16384;
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
 
-      // draw circle logo
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, logoRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 5;
-      ctx.stroke();
+const bars = 8000;
+const angleStep = (Math.PI*2)/bars;
 
-      for (let i = 0; i < bars; i++) {
-        const value = dataArray[i % bufferLength];
-        const barHeight = value * 0.5;
+function playTrack(index){
+  currentTrack = index % shuffled.length;
+  audio.src = shuffled[currentTrack];
+  audio.play();
+}
 
-        const angle = i * angleStep;
-        const x1 = centerX + Math.cos(angle) * logoRadius;
-        const y1 = centerY + Math.sin(angle) * logoRadius;
-        const x2 = centerX + Math.cos(angle) * (logoRadius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (logoRadius + barHeight);
+audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
 
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `hsl(${i / bars * 360}, 100%, 50%)`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
+function draw(){
+  requestAnimationFrame(draw);
+  analyser.getByteFrequencyData(dataArray);
 
-    document.getElementById("startBtn").addEventListener("click", () => {
-      audioCtx.resume().then(() => {
-        audio.play();
-        document.getElementById("startBtn").style.display = "none";
-        document.body.style.cursor = "none"; // hide mouse
-        draw();
-      });
-    });
-  </script>
+  ctx.clearRect(0,0,width,height);
+
+  // draw logo
+  const logoSize = logoRadius*2;
+  ctx.drawImage(logo, centerX-logoRadius, centerY-logoRadius, logoSize, logoSize);
+
+  // draw bars
+  for(let i=0;i<bars;i++){
+    // map bar to existing frequency bin
+    const bin = Math.floor(i / bars * bufferLength);
+    const value = dataArray[bin];
+    const barHeight = value*0.5;
+
+    const angle = i*angleStep;
+    const x1 = centerX + Math.cos(angle)*logoRadius;
+    const y1 = centerY + Math.sin(angle)*logoRadius;
+    const x2 = centerX + Math.cos(angle)*(logoRadius+barHeight);
+    const y2 = centerY + Math.sin(angle)*(logoRadius+barHeight);
+
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.strokeStyle = `hsl(${i/bars*360},100%,50%)`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Start button
+document.getElementById("startBtn").addEventListener("click", async ()=>{
+  await audioCtx.resume();
+  document.getElementById("startBtn").style.display="none";
+  document.body.style.cursor="none";
+  playTrack(0);
+  draw();
+});
+</script>
 </body>
 </html>
