@@ -21,45 +21,39 @@ canvas { display:block; }
 <audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
 
-<!-- jsmediatags to read audio metadata -->
-<script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.5/dist/jsmediatags.min.js"></script>
-
 <script>
+// Canvas setup
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const audio = document.getElementById('player');
-const startText = document.getElementById('startText');
-
-function resizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Playlist
+// Playlist URLs
 const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++) tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
+
+// Map URLs to actual song names (replace with correct names)
+const trackNames = {};
+for(let i=1;i<=maxTracks;i++){
+    trackNames[tracks[i-1]] = `Song ${i}`; // replace Song ${i} with real names if known
+}
+
+// Shuffle helper
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 shuffle(tracks);
 
 let currentTrack = 0;
-function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+const audio = document.getElementById('player');
 
-// Function to update tab title from audio metadata
+// Update tab title from mapped song name
 function updateTabTitle(url){
-    jsmediatags.read(url, {
-        onSuccess: function(tag){
-            const songTitle = tag.tags.title || "Unknown Song";
-            document.title = `KPDH - ${songTitle}`;
-        },
-        onError: function(err){
-            console.log("ID3 Error:", err);
-            document.title = "KPDH - Unknown Song";
-        }
-    });
+    const name = trackNames[url] || "Unknown Song";
+    document.title = `KPDH - ${name}`;
 }
 
+// Play track function
 function playTrack(index){
     if(tracks.length===0) return;
     if(index<0) index = tracks.length-1;
@@ -69,9 +63,11 @@ function playTrack(index){
     updateTabTitle(tracks[currentTrack]);
     audio.play().catch(e=>console.log("Play error:", e));
 }
+
+// Auto-next
 audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
 
-// Web Audio setup
+// Web Audio API
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 32768;
@@ -86,7 +82,8 @@ const smoothArray = new Float32Array(bufferLength);
 const logo = new Image();
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
 
-// Click to start
+// Start click
+const startText = document.getElementById('startText');
 startText.addEventListener("click", ()=>{
     audioCtx.resume().then(()=>{
         startText.style.display="none";
@@ -95,14 +92,12 @@ startText.addEventListener("click", ()=>{
     });
 });
 
-// Keyboard / media keys
-window.addEventListener('keydown', (e)=>{
-    if(e.code === "MediaTrackNext") playTrack(currentTrack+1);
-    if(e.code === "MediaTrackPrevious") playTrack(currentTrack-1);
-    if(e.code === "Space") audio.paused ? audio.play() : audio.pause();
+// Media keys support
+window.addEventListener('keydown', e=>{
+    if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
+    if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
+    if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
 });
-
-// Media Session API for Bluetooth media keys
 if('mediaSession' in navigator){
     navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
     navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
