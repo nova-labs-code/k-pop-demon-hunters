@@ -34,10 +34,10 @@ const maxTracks = 50;
 let tracks = [];
 for(let i=1;i<=maxTracks;i++) tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
 
-// Map URLs to actual song names (replace with correct names)
+// Map URLs to actual song names (replace with real song names)
 const trackNames = {};
 for(let i=1;i<=maxTracks;i++){
-    trackNames[tracks[i-1]] = `Song ${i}`; // replace Song ${i} with real names if known
+    trackNames[tracks[i-1]] = `Song ${i}`; // replace with actual song name if known
 }
 
 // Shuffle helper
@@ -53,6 +53,21 @@ function updateTabTitle(url){
     document.title = `KPDH - ${name}`;
 }
 
+// Media Session API
+function updateMediaSession(url){
+    const name = trackNames[url] || "Unknown Song";
+    if('mediaSession' in navigator){
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: name,
+            artist: 'K-Pop Demon Hunters', // app/site name
+            album: 'KPDH Playlist',
+            artwork: [
+                { src: 'https://bvp.neocities.org/roblox%20pfp.png', sizes: '512x512', type: 'image/png' }
+            ]
+        });
+    }
+}
+
 // Play track function
 function playTrack(index){
     if(tracks.length===0) return;
@@ -61,6 +76,7 @@ function playTrack(index){
     currentTrack = index;
     audio.src = tracks[currentTrack];
     updateTabTitle(tracks[currentTrack]);
+    updateMediaSession(tracks[currentTrack]);
     audio.play().catch(e=>console.log("Play error:", e));
 }
 
@@ -92,7 +108,7 @@ startText.addEventListener("click", ()=>{
     });
 });
 
-// Media keys support
+// Keyboard & Media Keys
 window.addEventListener('keydown', e=>{
     if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
     if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
