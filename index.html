@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Visualizer with Bluetooth & Auto-Resize</title>
+<title>Radial Visualizer with Bluetooth Media Keys</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -81,9 +81,10 @@ const maxFreq = 1200;
 window.addEventListener('keydown', (e)=>{
     if(e.code === "MediaTrackNext") playTrack(currentTrack+1);
     if(e.code === "MediaTrackPrevious") playTrack(currentTrack-1);
+    if(e.code === "Space") audio.paused ? audio.play() : audio.pause();
 });
 
-// Bluetooth / External device support
+// Bluetooth / External media keys
 if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('previoustrack', () => {
         playTrack(currentTrack - 1);
@@ -102,7 +103,6 @@ if ('mediaSession' in navigator) {
 function draw(){
     requestAnimationFrame(draw);
 
-    // Update center and logo radius dynamically
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const logoBaseRadius = Math.min(canvas.width, canvas.height) * 0.12;
@@ -110,7 +110,6 @@ function draw(){
 
     analyser.getByteFrequencyData(dataArray);
 
-    // Smooth frequencies
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
@@ -132,7 +131,6 @@ function draw(){
 
     const hueShift = Date.now()*0.02;
 
-    // Draw radial bars
     for(let i=0;i<actualBars;i++){
         const angle = (i/actualBars)*Math.PI*2;
         const freqIndex = Math.floor((i/actualBars) * maxFreq);
@@ -152,7 +150,6 @@ function draw(){
         ctx.stroke();
     }
 
-    // Draw logo
     if(logo.complete){
         const size = logoRadius*2;
         ctx.save();
