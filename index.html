@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Spikes Visualizer with Logo Pulse</title>
+<title>Radial Spikes Visualizer with Logo Pulse & Fade</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -79,7 +79,7 @@ startText.addEventListener("click", ()=>{
 });
 
 const actualBars = 15000;
-const maxFreq = 1200; // use first 1200 frequency bins
+const maxFreq = 1200; // first 1200 frequency bins for spikes
 
 // Media keys support
 window.addEventListener('keydown', (e)=>{
@@ -91,28 +91,31 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
+    // Smooth frequencies
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
 
-    // Compute overall bass for logo pulse
+    // Fade effect for bars
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; // alpha controls trail length
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Compute bass average for logo pulse (low frequencies)
     let bassSum = 0;
-    for(let i=0;i<maxFreq;i++) bassSum += smoothArray[i];
-    const bassAvg = bassSum / Math.max(1,maxFreq);
+    const bassLimit = 60;
+    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
+    const bassAvg = bassSum / bassLimit;
 
-    // Dynamic logo size
+    // Dynamic logo radius
     const minLogo = logoBaseRadius;
-    const maxLogo = logoBaseRadius*1.5;
+    const maxLogo = logoBaseRadius * 1.5;
     logoRadius = minLogo + (bassAvg/255) * (maxLogo - minLogo);
-
-    ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const hueShift = Date.now()*0.02;
 
+    // Draw radial bars
     for(let i=0;i<actualBars;i++){
         const angle = (i/actualBars)*Math.PI*2;
-
-        // Map bar to frequency index
         const freqIndex = Math.floor((i/actualBars) * maxFreq);
         const spike = (smoothArray[freqIndex]/255) * Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
 
