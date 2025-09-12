@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Smooth 15k-Bar Visualizer</title>
+<title>Full Circle 15k-Bar Visualizer</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -104,7 +104,7 @@ function draw(){
         smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
     }
 
-    // Bass pulse
+    // Bass pulse for logo
     let bassSum = 0;
     const bassLimit = Math.floor(200*bufferLength/22050);
     for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
@@ -119,14 +119,17 @@ function draw(){
     for(let i=0;i<actualBars;i++){
         const logIndex = Math.floor(Math.pow(i/actualBars,0.4)*bufferLength);
         const value = smoothArray[logIndex] || 0;
+
+        // Whole circle reaction
+        const radiusBase = logoRadius*0.5 + value/255*logoRadius*0.3; 
         const spike = Math.pow(value/255,1.4) * Math.min(canvas.width,canvas.height)*0.18;
 
         const angle = (i/actualBars)*Math.PI*2 + wavePhase;
 
-        const x1 = centerX + Math.cos(angle)*logoRadius;
-        const y1 = centerY + Math.sin(angle)*logoRadius;
-        const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
-        const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
+        const x1 = centerX + Math.cos(angle)*(radiusBase);
+        const y1 = centerY + Math.sin(angle)*(radiusBase);
+        const x2 = centerX + Math.cos(angle)*(radiusBase + spike);
+        const y2 = centerY + Math.sin(angle)*(radiusBase + spike);
 
         const hue = (i*360/actualBars+hueShift)%360;
         ctx.strokeStyle = `hsl(${hue},100%,50%)`;
