@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Radial Visualizer with Auto-Resize</title>
+<title>Radial Visualizer with Bluetooth & Auto-Resize</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -77,11 +77,27 @@ startText.addEventListener("click", ()=>{
 const actualBars = 15000;
 const maxFreq = 1200;
 
-// Media keys support
+// Keyboard Media keys
 window.addEventListener('keydown', (e)=>{
     if(e.code === "MediaTrackNext") playTrack(currentTrack+1);
     if(e.code === "MediaTrackPrevious") playTrack(currentTrack-1);
 });
+
+// Bluetooth / External device support
+if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playTrack(currentTrack - 1);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playTrack(currentTrack + 1);
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        audio.pause();
+    });
+    navigator.mediaSession.setActionHandler('play', () => {
+        audio.play();
+    });
+}
 
 function draw(){
     requestAnimationFrame(draw);
