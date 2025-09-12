@@ -37,12 +37,15 @@ const MIRROR_OPPOSITE = true;     // draw mirrored bar opposite (dynamic symmetr
 const BAND_SPLIT_COUNT = 4;       // number of bands (bass/low-mid/high-mid/treble)
 
 /* =========================
+/* =========================
    DOM + CANVAS
    ========================= */
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { alpha: true });
 const audio = document.getElementById('player');
 const startText = document.getElementById('startText');
+
+let centerX, centerY, logoBaseRadius; // <-- declare first
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -52,7 +55,8 @@ function resize() {
   logoBaseRadius = Math.min(canvas.width, canvas.height) * BASE_LOGO_RATIO;
 }
 window.addEventListener('resize', resize);
-resize();
+resize(); // safe now
+
 
 let centerX = canvas.width/2, centerY = canvas.height/2;
 let logoBaseRadius = Math.min(canvas.width, canvas.height) * BASE_LOGO_RATIO;
