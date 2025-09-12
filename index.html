@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Full Radial Spikes Visualizer</title>
+<title>Radial Spikes with Media Keys</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -79,21 +79,26 @@ startText.addEventListener("click", ()=>{
 });
 
 const actualBars = 15000;
+const maxFreq = 250; // Limit to first 250 frequency bins
+
+// Media keys support
+window.addEventListener('keydown', (e)=>{
+    if(e.code === "MediaTrackNext") playTrack(currentTrack+1);
+    if(e.code === "MediaTrackPrevious") playTrack(currentTrack-1);
+});
 
 function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
-    // Smooth for cleaner spikes
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
     }
 
-    // Compute overall beat/bass for radial scaling
+    // Overall bass/beat from first 250 bins
     let bassSum = 0;
-    const bassLimit = Math.floor(200*bufferLength/22050);
-    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
-    const bassAvg = bassSum / Math.max(1,bassLimit);
+    for(let i=0;i<maxFreq;i++) bassSum += smoothArray[i];
+    const bassAvg = bassSum / Math.max(1,maxFreq);
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -102,8 +107,8 @@ function draw(){
     for(let i=0;i<actualBars;i++){
         const angle = (i/actualBars)*Math.PI*2;
 
-        // Individual spike per bar
-        const freqIndex = Math.floor((i/actualBars) * bufferLength);
+        // Map bar to frequency index
+        const freqIndex = Math.floor((i/actualBars) * maxFreq);
         const spike = (smoothArray[freqIndex]/255) * Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
 
         const x1 = centerX + Math.cos(angle)*logoRadius;
