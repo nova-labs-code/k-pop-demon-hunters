@@ -1,12 +1,14 @@
 {
-  "name": "Kpop demon hunters visualizer made by bvp",
-  "short_name": "K-Pop Demon Hunters visualizer",
+  "name": "K-Pop Demon Hunters",
+  "short_name": "KPDH",
   "start_url": "/",
   "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000",
   "icons": [
     {
-      "src": "/icon.png",
-      "sizes": "192x192",
+      "src": "https://bvp.neocities.org/roblox%20pfp.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
