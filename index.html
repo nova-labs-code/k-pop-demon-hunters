@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>YouTube-Style Visualizer 45k Bars</title>
+<title>YouTube-Style Visualizer with Logo Pulse</title>
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -33,11 +33,13 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 let centerX = canvas.width/2, centerY = canvas.height/2;
-let logoRadius = Math.min(canvas.width,canvas.height)*0.12;
+let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+let logoRadius = logoBaseRadius;
 window.addEventListener('resize', ()=>{
     centerX = canvas.width/2;
     centerY = canvas.height/2;
-    logoRadius = Math.min(canvas.width,canvas.height)*0.12;
+    logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+    logoRadius = logoBaseRadius;
 });
 
 // Playlist
@@ -95,14 +97,23 @@ function draw(){
     requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
 
+    // Smooth
     for(let i=0;i<bufferLength;i++){
         smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
     }
 
+    // Calculate bass for logo pulse (0-200Hz)
+    let bassSum = 0;
+    for(let i=0;i<Math.floor(200*bufferLength/22050);i++){
+        bassSum += smoothArray[i];
+    }
+    let bassAvg = bassSum / Math.max(1, Math.floor(200*bufferLength/22050));
+    logoRadius = logoBaseRadius + bassAvg*0.2; // pulse factor
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const actualBars = 20000; // actual rendered
-    const layers = 2; // 2 layers for visual density (~50k)
+    const actualBars = 25000; // computed bars
+    const layers = 2; // simulate 50k
     const hueShift = Date.now()*0.02;
 
     for(let l=0;l<layers;l++){
@@ -131,6 +142,7 @@ function draw(){
         }
     }
 
+    // Draw logo
     if(logo.complete){
         const size = logoRadius*2;
         ctx.save();
