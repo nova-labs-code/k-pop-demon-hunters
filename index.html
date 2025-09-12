@@ -2,133 +2,151 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>8K Circle Visualizer</title>
+<title>Reactive 15k-Bar Visualizer</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #000;
-  }
-  canvas { display: block; }
-  #startBtn {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 20px 40px;
-    font-size: 24px;
-    background: #fff;
-    color: #000;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-  }
+html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
+canvas { display:block; }
+#startText {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  display:flex; justify-content:center; align-items:center;
+  color:white; font-size:48px; font-family:sans-serif;
+  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
+  cursor:pointer;
+}
 </style>
 </head>
 <body>
-<button id="startBtn">Start</button>
+<div id="startText">Click to Start</div>
+<audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
-
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const audio = document.getElementById('player');
+const startText = document.getElementById('startText');
 
-let width = window.innerWidth;
-let height = window.innerHeight;
-canvas.width = width;
-canvas.height = height;
-let centerX = width/2;
-let centerY = height/2;
-let logoRadius = Math.min(width,height)*0.15;
+function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-window.addEventListener("resize", () => {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-  centerX = width/2;
-  centerY = height/2;
-  logoRadius = Math.min(width,height)*0.15;
+let centerX = canvas.width/2, centerY = canvas.height/2;
+let logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+let logoRadius = logoBaseRadius;
+window.addEventListener('resize', ()=>{
+    centerX = canvas.width/2;
+    centerY = canvas.height/2;
+    logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+    logoRadius = logoBaseRadius;
 });
+
+// Playlist
+const maxTracks = 50;
+let tracks = [];
+for(let i=1;i<=maxTracks;i++) tracks.push(`https://dev-bvp.github.io/k-pop-demon-hunters/song${i}.mp3`);
+shuffle(tracks);
+
+let currentTrack = 0;
+function playTrack(index){
+    if(tracks.length===0) return;
+    if(index<0) index = tracks.length-1;
+    if(index>=tracks.length) index = 0;
+    currentTrack = index;
+    audio.src = tracks[currentTrack];
+    audio.play().catch(e=>console.log("Play error:", e));
+}
+audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+
+// Media keys
+if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
+    navigator.mediaSession.setActionHandler('play', ()=>audio.play());
+    navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+}
+
+// Web Audio
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 32768;
+const source = audioCtx.createMediaElementSource(audio);
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
+const smoothArray = new Float32Array(bufferLength);
 
 // Logo
 const logo = new Image();
 logo.src = "https://bvp.neocities.org/roblox%20pfp.png";
 
-// Auto-detect MP3s (assumes server files: song1.mp3 -> song50.mp3)
-const audioFiles = [];
-for(let i=1;i<=50;i++){
-  audioFiles.push(`k-pop-demon-hunters/song${i}.mp3`);
-}
-const shuffled = audioFiles.sort(()=>Math.random()-0.5);
-let currentTrack = 0;
-
-const audio = new Audio();
-audio.crossOrigin = "anonymous";
-
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-const source = audioCtx.createMediaElementSource(audio);
-const analyser = audioCtx.createAnalyser();
-source.connect(analyser);
-analyser.connect(audioCtx.destination);
-
-// FFT size capped to max safe
-analyser.fftSize = 16384;
-const bufferLength = analyser.frequencyBinCount;
-const dataArray = new Uint8Array(bufferLength);
-
-const bars = 8000;
-const angleStep = (Math.PI*2)/bars;
-
-function playTrack(index){
-  currentTrack = index % shuffled.length;
-  audio.src = shuffled[currentTrack];
-  audio.play();
-}
-
-audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
-
-function draw(){
-  requestAnimationFrame(draw);
-  analyser.getByteFrequencyData(dataArray);
-
-  ctx.clearRect(0,0,width,height);
-
-  // draw logo
-  const logoSize = logoRadius*2;
-  ctx.drawImage(logo, centerX-logoRadius, centerY-logoRadius, logoSize, logoSize);
-
-  // draw bars
-  for(let i=0;i<bars;i++){
-    // map bar to existing frequency bin
-    const bin = Math.floor(i / bars * bufferLength);
-    const value = dataArray[bin];
-    const barHeight = value*0.5;
-
-    const angle = i*angleStep;
-    const x1 = centerX + Math.cos(angle)*logoRadius;
-    const y1 = centerY + Math.sin(angle)*logoRadius;
-    const x2 = centerX + Math.cos(angle)*(logoRadius+barHeight);
-    const y2 = centerY + Math.sin(angle)*(logoRadius+barHeight);
-
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.strokeStyle = `hsl(${i/bars*360},100%,50%)`;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-}
-
-// Start button
-document.getElementById("startBtn").addEventListener("click", async ()=>{
-  await audioCtx.resume();
-  document.getElementById("startBtn").style.display="none";
-  document.body.style.cursor="none";
-  playTrack(0);
-  draw();
+// Start
+startText.addEventListener("click", ()=>{
+    audioCtx.resume().then(()=>{
+        startText.style.display="none";
+        document.body.style.cursor="none";
+        playTrack(currentTrack);
+    });
 });
+
+// Draw
+function draw(){
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+
+    for(let i=0;i<bufferLength;i++){
+        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3; // faster response
+    }
+
+    // Bass-based logo pulse
+    let bassSum = 0;
+    const bassLimit = Math.floor(200*bufferLength/22050);
+    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
+    const bassAvg = bassSum / Math.max(1,bassLimit);
+    logoRadius = logoBaseRadius + bassAvg*0.6; // stronger pulse
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const actualBars = 15000;
+    const hueShift = Date.now()*0.02;
+
+    for(let i=0;i<actualBars;i++){
+        const logIndex = Math.floor(Math.pow(i/actualBars,0.4)*bufferLength);
+        const value = smoothArray[logIndex] || 0;
+        let spike = Math.pow(value/255,1.5) * Math.min(canvas.width,canvas.height)*0.2;
+        spike += Math.random()*0.05*Math.min(canvas.width,canvas.height); // jitter
+        const baseAngle = (i/actualBars)*Math.PI*2;
+        const waveOffset = Math.sin(Date.now()*0.002+i*0.004)*0.05;
+        const angle = baseAngle + waveOffset;
+        const x1 = centerX + Math.cos(angle)*logoRadius;
+        const y1 = centerY + Math.sin(angle)*logoRadius;
+        const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
+        const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
+        const hue = (i*360/actualBars+hueShift)%360;
+        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+        ctx.lineWidth = 0.35;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(x2,y2);
+        ctx.stroke();
+    }
+
+    // Draw logo
+    if(logo.complete){
+        const size = logoRadius*2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
+        ctx.restore();
+    }
+}
+
+draw();
 </script>
 </body>
 </html>
