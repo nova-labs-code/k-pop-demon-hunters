@@ -112,7 +112,7 @@ function updateMediaSession(url){
             artist: 'Netflix', // Sets the artist name for the track to "Netflix"
             album: 'KPDH Playlist',      // Sets the album name for the track
             artwork: [
-                { src: 'https://samsongraceacademy.neocities.org/favicon.png', sizes: '512x512', type: 'image/png' }
+                { src: './favicon.ico', sizes: '512x512', type: 'image/ico' }
             ]
         });
         navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
