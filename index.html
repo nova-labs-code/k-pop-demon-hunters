@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K-Pop Demon Hunters</title>
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="/manifest.json">
 <style>
 html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
@@ -112,7 +112,7 @@ function updateMediaSession(url){
             artist: 'Netflix', // Sets the artist name for the track to "Netflix"
             album: 'KPDH Playlist',      // Sets the album name for the track
             artwork: [
-                { src: './favicon.ico', sizes: '512x512', type: 'image/ico' }
+                { src: 'https://nova-labs-code.github.io/k-pop-demon-hunters/favicon.ico', sizes: '512x512', type: 'image/ico' }
             ]
         });
         navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
@@ -150,7 +150,7 @@ const smoothArray = new Float32Array(bufferLength);
 
 // Logo
 const logo = new Image();
-logo.src = "./favicon.ico";
+logo.src = "https://nova-labs-code.github.io/k-pop-demon-hunters/favicon.ico";
 
 // Start click
 const startText = document.getElementById('startText');
