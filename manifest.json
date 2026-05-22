@@ -7,9 +7,9 @@
   "background_color": "#000000",
   "icons": [
     {
-      "src": "https://bvp.neocities.org/roblox%20pfp.png",
+      "src": "./favicon.ico",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/ico"
     }
   ]
 }
