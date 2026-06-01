@@ -5,38 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K-Pop Demon Hunters</title>
 <link rel="manifest" href="./manifest.json">
+
 <style>
-html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
-canvas { display:block; }
+html, body {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:black;
+  cursor:pointer;
+}
+
+canvas {
+  display:block;
+}
+
 #startText {
-  position: fixed; top:0; left:0; right:0; bottom:0;
-  display:flex; justify-content:center; align-items:center;
-  color:white; font-size:48px; font-family:sans-serif;
-  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
+  position: fixed;
+  inset: 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  font-size:48px;
+  font-family:sans-serif;
+  user-select:none;
+  background: rgba(0,0,0,0.85);
+  z-index:9999;
   cursor:pointer;
 }
 </style>
 </head>
+
 <body>
 <div id="startText">Click to Start</div>
-<audio id="player" type="audio/mpeg"></audio>
+
+<audio id="player" preload="auto" playsinline></audio>
 <canvas id="canvas"></canvas>
 
 <script>
-// Canvas setup
+// Canvas
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Auto-numbered playlist 1-50
+// Playlist
 let tracks = [];
 for (let i = 1; i <= 50; i++) {
-    tracks.push(`./song${i}.mp3`);
+  tracks.push(`./song${i}.mp3`);
 }
 
-// Mapping to real song names
+// Names
 const trackNames = {
   "song1.mp3":"Soda Pop (HUNTR/X Version)",
   "song2.mp3":"How It's Done (KPOP DEMON HUNTERS METAL COVER)",
@@ -59,175 +83,191 @@ const trackNames = {
   "song19.mp3":"Soda Pop (Cover)",
   "song20.mp3":"Jinu's Lament",
   "song21.mp3":"오솔길 Path",
-  "song22.mp3":"Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
-  "song23.mp3":"Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
-  "song24.mp3":"Your Idol - KPop Demon Hunters - Acoustic Cover",
-  "song25.mp3":"Prolouge (Hunter's Mantra)",
+  "song22.mp3":"Soda Pop (Acoustic)",
+  "song23.mp3":"Golden Male Version",
+  "song24.mp3":"Your Idol Acoustic",
+  "song25.mp3":"Hunter's Mantra",
   "song26.mp3":"Score Suite",
-  "song27.mp3":"Face Your Demons (Rumi Villain Song)",
-  "song28.mp3":"Your Idol (Huntrix Version)",
-  "song29.mp3":"Golden Cover (Rain Paris)",
+  "song27.mp3":"Face Your Demons",
+  "song28.mp3":"Your Idol",
+  "song29.mp3":"Golden Cover",
   "song30.mp3":"Free (Acapella)",
   "song31.mp3":"Free (Instrumental)",
   "song32.mp3":"Free (Sing-Along)",
   "song33.mp3":"Free",
-  "song34.mp3":"Soda Pop (Acapella)",
-  "song35.mp3":"Soda Pop (Instrumental)",
-  "song36.mp3":"Soda Pop (Sing-Along)",
+  "song34.mp3":"Soda Pop Acapella",
+  "song35.mp3":"Soda Pop Instrumental",
+  "song36.mp3":"Soda Pop Sing-Along",
   "song37.mp3":"Soda Pop",
-  "song38.mp3":"Your Idol (Acapella)",
-  "song39.mp3":"Your Idol (Instrumental)",
-  "song40.mp3":"Your Idol (Sing-Along)",
+  "song38.mp3":"Your Idol Acapella",
+  "song39.mp3":"Your Idol Instrumental",
+  "song40.mp3":"Your Idol Sing-Along",
   "song41.mp3":"Your Idol",
-  "song42.mp3":"Huntrix - Takedown (Singing Cover)",
-  "song43.mp3":"KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
-  "song44.mp3":"What it sounds like (acoustic)",
+  "song42.mp3":"Takedown Cover",
+  "song43.mp3":"TAKEDOWN Slowed",
+  "song44.mp3":"What it sounds like acoustic",
   "song45.mp3":"Strategy",
   "song46.mp3":"TAKEDOWN",
-  "song47.mp3":"Monst3r - Rumi (K-Pop Demon Hunters)",
-  "song48.mp3":"Takedown - Saja Boys (Demon Boy Cut)",
-  "song49.mp3":"사랑인가 봐 Love, Maybe",
-  "song50.mp3":"Golden (Acoustic Cover)"
+  "song47.mp3":"Monst3r",
+  "song48.mp3":"Takedown Saja Boys",
+  "song49.mp3":"Love, Maybe",
+  "song50.mp3":"Golden Acoustic"
 };
 
-// Shuffle playlist
-function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+// Shuffle
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+}
 shuffle(tracks);
 
 let currentTrack = 0;
 const audio = document.getElementById('player');
 
-// Update tab title
-function updateTabTitle(url){
-    const name = trackNames[url.split('/').pop()] || "Unknown Song";
-    document.title = `KPDH - ${name}`;
-}
-
-// Media Session API for your app
-function updateMediaSession(url){
-    const name = trackNames[url.split('/').pop()] || "Unknown Song";
-    if('mediaSession' in navigator){
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: name,
-            artist: 'Netflix', // Sets the artist name for the track to "Netflix"
-            album: 'KPDH Playlist',      // Sets the album name for the track
-            artwork: [
-                { src: './favicon.ico', sizes: '512x512', type: 'image/ico' }
-            ]
-        });
-        navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
-        navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
-        navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
-        navigator.mediaSession.setActionHandler('play', ()=>audio.play());
-    }
-}
-
-// Play track function
-function playTrack(index){
-    if(tracks.length===0) return;
-    if(index<0) index = tracks.length-1;
-    if(index>=tracks.length) index = 0;
-    currentTrack = index;
-    audio.src = tracks[currentTrack];
-    updateTabTitle(tracks[currentTrack]);
-    updateMediaSession(tracks[currentTrack]);
-    audio.play().catch(e=>console.log("Play error:", e));
-}
-
-// Auto-next
-audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
-
-// Web Audio API
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+// Audio Context
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 32768;
+analyser.fftSize = 8192;
+
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
+
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 const smoothArray = new Float32Array(bufferLength);
 
-// Logo
+// Title update
+function updateTabTitle(url){
+  const name = trackNames[url.split('/').pop()] || "Unknown";
+  document.title = `KPDH - ${name}`;
+}
+
+// Media Session (lock screen support)
+function updateMediaSession(url){
+  const name = trackNames[url.split('/').pop()] || "Unknown";
+
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: name,
+      artist: 'KPDH',
+      album: 'Playlist',
+      artwork: [{ src:'./favicon.ico', sizes:'512x512', type:'image/ico' }]
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
+    navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+    navigator.mediaSession.setActionHandler('play', ()=>audio.play());
+  }
+}
+
+// Play
+function playTrack(index){
+  if(index<0) index = tracks.length-1;
+  if(index>=tracks.length) index = 0;
+
+  currentTrack = index;
+  audio.src = tracks[currentTrack];
+
+  updateTabTitle(tracks[currentTrack]);
+  updateMediaSession(tracks[currentTrack]);
+
+  audio.play().catch(()=>{});
+}
+
+audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
+
+// START
+const startText = document.getElementById('startText');
+
+startText.addEventListener("click", async ()=>{
+  await audioCtx.resume();
+  startText.style.display = "none";
+  document.body.style.cursor = "none";
+  playTrack(currentTrack);
+});
+
+// KEY CONTROLS
+window.addEventListener('keydown', e=>{
+  if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
+  if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
+  if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
+});
+
+// 🔥 IMPORTANT: suspend visuals when hidden
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden){
+    audioCtx.suspend();
+  } else {
+    audioCtx.resume();
+  }
+});
+
+// VISUALIZER
 const logo = new Image();
 logo.src = "./favicon.ico";
 
-// Start click
-const startText = document.getElementById('startText');
-startText.addEventListener("click", ()=>{
-    audioCtx.resume().then(()=>{
-        startText.style.display="none";
-        document.body.style.cursor="none";
-        playTrack(currentTrack);
-    });
-});
-
-// Keyboard & Media Keys
-window.addEventListener('keydown', e=>{
-    if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
-    if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
-    if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
-});
-
-// Visualizer
-const actualBars = 15000;
-const maxFreq = 1200;
+const actualBars = 4000;
+const maxFreq = 600;
 
 function draw(){
-    requestAnimationFrame(draw);
+  requestAnimationFrame(draw);
 
-    const centerX = canvas.width/2;
-    const centerY = canvas.height/2;
-    const logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
-    let logoRadius;
+  // if hidden, skip heavy work
+  if(document.hidden) return;
 
-    analyser.getByteFrequencyData(dataArray);
-    for(let i=0;i<bufferLength;i++){
-        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
-    }
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
+  const base = Math.min(canvas.width,canvas.height)*0.12;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+  analyser.getByteFrequencyData(dataArray);
 
-    let bassSum = 0;
-    const bassLimit = 60;
-    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
-    const bassAvg = bassSum / bassLimit;
+  for(let i=0;i<bufferLength;i++){
+    smoothArray[i] = smoothArray[i]*0.75 + dataArray[i]*0.25;
+  }
 
-    const minLogo = logoBaseRadius;
-    const maxLogo = logoBaseRadius*1.5;
-    logoRadius = minLogo + (bassAvg/255)*(maxLogo-minLogo);
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    const hueShift = Date.now()*0.02;
+  let bass = 0;
+  for(let i=0;i<60;i++) bass += smoothArray[i];
+  bass /= 60;
 
-    for(let i=0;i<actualBars;i++){
-        const angle = (i/actualBars)*Math.PI*2;
-        const freqIndex = Math.floor((i/actualBars)*maxFreq);
-        const spike = (smoothArray[freqIndex]/255)*Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
+  const radius = base + (bass/255)*base*0.6;
 
-        const x1 = centerX + Math.cos(angle)*logoRadius;
-        const y1 = centerY + Math.sin(angle)*logoRadius;
-        const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
-        const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
+  const timeShift = Date.now()*0.02;
 
-        const hue = (i*360/actualBars + hueShift)%360;
-        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-        ctx.lineWidth = 0.35;
-        ctx.beginPath();
-        ctx.moveTo(x1,y1);
-        ctx.lineTo(x2,y2);
-        ctx.stroke();
-    }
+  for(let i=0;i<actualBars;i++){
+    const angle = (i/actualBars)*Math.PI*2;
+    const idx = Math.floor((i/actualBars)*maxFreq);
 
-    if(logo.complete){
-        const size = logoRadius*2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
-        ctx.clip();
-        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
-        ctx.restore();
-    }
+    const spike = (smoothArray[idx]/255)*120 + bass*0.2;
+
+    const x1 = cx + Math.cos(angle)*radius;
+    const y1 = cy + Math.sin(angle)*radius;
+    const x2 = cx + Math.cos(angle)*(radius+spike);
+    const y2 = cy + Math.sin(angle)*(radius+spike);
+
+    ctx.strokeStyle = `hsl(${(i*360/actualBars + timeShift)%360},100%,55%)`;
+    ctx.lineWidth = 0.4;
+
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  if(logo.complete){
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx,cy,radius,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,cx-radius,cy-radius,radius*2,radius*2);
+    ctx.restore();
+  }
 }
 
 draw();
