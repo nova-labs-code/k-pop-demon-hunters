@@ -1,67 +1,44 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K-Pop Demon Hunters</title>
 <link rel="manifest" href="./manifest.json">
-
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  background:black;
-  cursor:pointer;
-}
+html, body { margin:0; padding:0; overflow:hidden; background:black; cursor:pointer; }
 canvas { display:block; }
-
 #startText {
-  position: fixed;
-  inset: 0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  color:white;
-  font-size:48px;
-  font-family:sans-serif;
-  user-select:none;
-  background: rgba(0,0,0,0.85);
-  z-index:9999;
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  display:flex; justify-content:center; align-items:center;
+  color:white; font-size:48px; font-family:sans-serif;
+  user-select:none; background: rgba(0,0,0,0.85); z-index:9999;
+  cursor:pointer;
 }
 </style>
 </head>
-
 <body>
-
 <div id="startText">Click to Start</div>
-
-<audio id="player" preload="auto" playsinline></audio>
+<audio id="player" type="audio/mpeg"></audio>
 <canvas id="canvas"></canvas>
 
 <script>
+// Canvas setup
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-/* =========================
-   CANVAS
-========================= */
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
+// Auto-numbered playlist 1-50
+let tracks = [];
+for (let i = 1; i <= 50; i++) {
+    tracks.push(`./song${i}.mp3`);
 }
-addEventListener("resize", resize);
-resize();
 
-/* =========================
-   🎧 FULL 50 TRACK NAMES
-========================= */
-
+// Mapping to real song names
 const trackNames = {
   "song1.mp3":"Soda Pop (HUNTR/X Version)",
-  "song2.mp3":"How It's Done (Metal Cover)",
+  "song2.mp3":"How It's Done (KPOP DEMON HUNTERS METAL COVER)",
   "song3.mp3":"Golden (Acapella)",
   "song4.mp3":"Golden (Instrumental)",
   "song5.mp3":"Golden (Sing-Along)",
@@ -71,7 +48,7 @@ const trackNames = {
   "song9.mp3":"How It's Done (Sing-Along)",
   "song10.mp3":"How It's Done",
   "song11.mp3":"Takedown (Acapella)",
-  "song12.mp3":"Takedown (Instrumental)",
+  "song12.3":"Takedown (Instrumental)",
   "song13.mp3":"Takedown (Sing-Along)",
   "song14.mp3":"Takedown",
   "song15.mp3":"What It Sounds Like (Acapella)",
@@ -81,12 +58,12 @@ const trackNames = {
   "song19.mp3":"Soda Pop (Cover)",
   "song20.mp3":"Jinu's Lament",
   "song21.mp3":"오솔길 Path",
-  "song22.mp3":"Soda Pop (Acoustic)",
-  "song23.mp3":"Golden Male Version",
-  "song24.mp3":"Your Idol Acoustic",
-  "song25.mp3":"Hunter's Mantra",
+  "song22.mp3":"Soda Pop (Feat Kim X & ZEVON) (Acoustic Version)",
+  "song23.mp3":"Male Version HUNTRIX - Golden (Kpop Demon Hunters)",
+  "song24.mp3":"Your Idol - KPop Demon Hunters - Acoustic Cover",
+  "song25.mp3":"Prolouge (Hunter's Mantra)",
   "song26.mp3":"Score Suite",
-  "song27.mp3":"Face Your Demons",
+  "song27.mp3":"Face Your Demons (Rumi Villain Song)",
   "song28.mp3":"Your Idol (Huntrix Version)",
   "song29.mp3":"Golden Cover (Rain Paris)",
   "song30.mp3":"Free (Acapella)",
@@ -101,194 +78,158 @@ const trackNames = {
   "song39.mp3":"Your Idol (Instrumental)",
   "song40.mp3":"Your Idol (Sing-Along)",
   "song41.mp3":"Your Idol",
-  "song42.mp3":"Huntrix - Takedown Cover",
-  "song43.mp3":"Takedown Slowed Acoustic",
-  "song44.mp3":"What It Sounds Like Acoustic",
+  "song42.mp3":"Huntrix - Takedown (Singing Cover)",
+  "song43.mp3":"KPop Demon Hunters - TAKEDOWN (Slowed Acoustic Lyrics)",
+  "song44.mp3":"What it sounds like (acoustic)",
   "song45.mp3":"Strategy",
-  "song46.mp3":"TAKEDOWN (Alt)",
-  "song47.mp3":"Monst3r - Rumi",
-  "song48.mp3":"Takedown Saja Boys Version",
-  "song49.mp3":"Love, Maybe",
-  "song50.mp3":"Golden Acoustic Cover"
+  "song46.mp3":"TAKEDOWN",
+  "song47.mp3":"Monst3r - Rumi (K-Pop Demon Hunters)",
+  "song48.mp3":"Takedown - Saja Boys (Demon Boy Cut)",
+  "song49.mp3":"사랑인가 봐 Love, Maybe",
+  "song50.mp3":"Golden (Acoustic Cover)"
 };
 
-/* =========================
-   PLAYLIST (ALL 50 FILES)
-========================= */
-
-const tracks = Array.from({ length: 50 }, (_, i) => ({
-  file: `./song${i + 1}.mp3`,
-  key: `song${i + 1}.mp3`,
-  title: trackNames[`song${i + 1}.mp3`] || `Track ${i + 1}`
-}));
-
-let current = 0;
-const audio = document.getElementById("player");
-
-/* =========================
-   SHUFFLE
-========================= */
-
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
-}
+// Shuffle playlist
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
 shuffle(tracks);
 
-/* =========================
-   MEDIA SESSION (LOCK SCREEN)
-========================= */
+let currentTrack = 0;
+const audio = document.getElementById('player');
 
-function setMedia(track){
-
-  if(!("mediaSession" in navigator)) return;
-
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: track.title,
-    artist: "KPDH",
-    album: "50 Track Playlist",
-    artwork: [{
-      src:"./favicon.ico",
-      sizes:"512x512",
-      type:"image/png"
-    }]
-  });
-
-  navigator.mediaSession.setActionHandler("play", ()=>audio.play());
-  navigator.mediaSession.setActionHandler("pause", ()=>audio.pause());
-  navigator.mediaSession.setActionHandler("nexttrack", ()=>play(current+1));
-  navigator.mediaSession.setActionHandler("previoustrack", ()=>play(current-1));
+// Update tab title
+function updateTabTitle(url){
+    const name = trackNames[url.split('/').pop()] || "Unknown Song";
+    document.title = `KPDH - ${name}`;
 }
 
-/* =========================
-   WEB AUDIO (VISUALIZER ONLY)
-========================= */
+// Media Session API for your app
+function updateMediaSession(url){
+    const name = trackNames[url.split('/').pop()] || "Unknown Song";
+    if('mediaSession' in navigator){
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: name,
+            artist: 'Netflix', // Sets the artist name for the track to "Netflix"
+            album: 'KPDH Playlist',      // Sets the album name for the track
+            artwork: [
+                { src: './favicon.ico', sizes: '512x512', type: 'image/ico' }
+            ]
+        });
+        navigator.mediaSession.setActionHandler('previoustrack', ()=>playTrack(currentTrack-1));
+        navigator.mediaSession.setActionHandler('nexttrack', ()=>playTrack(currentTrack+1));
+        navigator.mediaSession.setActionHandler('pause', ()=>audio.pause());
+        navigator.mediaSession.setActionHandler('play', ()=>audio.play());
+    }
+}
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Play track function
+function playTrack(index){
+    if(tracks.length===0) return;
+    if(index<0) index = tracks.length-1;
+    if(index>=tracks.length) index = 0;
+    currentTrack = index;
+    audio.src = tracks[currentTrack];
+    updateTabTitle(tracks[currentTrack]);
+    updateMediaSession(tracks[currentTrack]);
+    audio.play().catch(e=>console.log("Play error:", e));
+}
+
+// Auto-next
+audio.addEventListener("ended", ()=>playTrack(currentTrack+1));
+
+// Web Audio API
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
-analyser.fftSize = 4096;
-
+analyser.fftSize = 32768;
 const source = audioCtx.createMediaElementSource(audio);
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
-
 const bufferLength = analyser.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLength);
 const smoothArray = new Float32Array(bufferLength);
 
-/* =========================
-   BACKGROUND SAFE MODE
-========================= */
+// Logo
+const logo = new Image();
+logo.src = "./favicon.ico";
 
-let active = true;
-
-document.addEventListener("visibilitychange", () => {
-  active = !document.hidden;
-  if(document.hidden){
-    audioCtx.suspend().catch(()=>{});
-  } else {
-    audioCtx.resume().catch(()=>{});
-  }
+// Start click
+const startText = document.getElementById('startText');
+startText.addEventListener("click", ()=>{
+    audioCtx.resume().then(()=>{
+        startText.style.display="none";
+        document.body.style.cursor="none";
+        playTrack(currentTrack);
+    });
 });
 
-/* =========================
-   PLAY ENGINE
-========================= */
-
-function play(i){
-
-  if(i < 0) i = tracks.length - 1;
-  if(i >= tracks.length) i = 0;
-
-  current = i;
-
-  const track = tracks[current];
-
-  audio.src = track.file;
-  audio.currentTime = 0;
-
-  audio.play().catch(()=>{});
-
-  setMedia(track);
-}
-
-/* =========================
-   AUTO NEXT
-========================= */
-
-audio.addEventListener("ended", ()=>play(current+1));
-
-/* =========================
-   START
-========================= */
-
-document.getElementById("startText").addEventListener("click", async ()=>{
-
-  await audioCtx.resume();
-
-  document.getElementById("startText").style.display = "none";
-
-  play(0);
+// Keyboard & Media Keys
+window.addEventListener('keydown', e=>{
+    if(e.code==="MediaTrackNext") playTrack(currentTrack+1);
+    if(e.code==="MediaTrackPrevious") playTrack(currentTrack-1);
+    if(e.code==="Space") audio.paused ? audio.play() : audio.pause();
 });
 
-/* =========================
-   VISUALIZER (SAFE BACKGROUND)
-========================= */
+// Visualizer
+const actualBars = 15000;
+const maxFreq = 1200;
 
 function draw(){
+    requestAnimationFrame(draw);
 
-  requestAnimationFrame(draw);
+    const centerX = canvas.width/2;
+    const centerY = canvas.height/2;
+    const logoBaseRadius = Math.min(canvas.width,canvas.height)*0.12;
+    let logoRadius;
 
-  if(!active) return;
+    analyser.getByteFrequencyData(dataArray);
+    for(let i=0;i<bufferLength;i++){
+        smoothArray[i] = smoothArray[i]*0.7 + dataArray[i]*0.3;
+    }
 
-  analyser.getByteFrequencyData(dataArray);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  for(let i=0;i<bufferLength;i++){
-    smoothArray[i] = smoothArray[i]*0.8 + dataArray[i]*0.2;
-  }
+    let bassSum = 0;
+    const bassLimit = 60;
+    for(let i=0;i<bassLimit;i++) bassSum += smoothArray[i];
+    const bassAvg = bassSum / bassLimit;
 
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+    const minLogo = logoBaseRadius;
+    const maxLogo = logoBaseRadius*1.5;
+    logoRadius = minLogo + (bassAvg/255)*(maxLogo-minLogo);
 
-  let bass = 0;
-  for(let i=0;i<50;i++) bass += smoothArray[i];
-  bass /= 50;
+    const hueShift = Date.now()*0.02;
 
-  const cx = canvas.width/2;
-  const cy = canvas.height/2;
-  const base = Math.min(canvas.width,canvas.height)*0.12;
+    for(let i=0;i<actualBars;i++){
+        const angle = (i/actualBars)*Math.PI*2;
+        const freqIndex = Math.floor((i/actualBars)*maxFreq);
+        const spike = (smoothArray[freqIndex]/255)*Math.min(canvas.width,canvas.height)*0.18 + bassAvg*0.15;
 
-  const radius = base + (bass/255)*base*0.6;
+        const x1 = centerX + Math.cos(angle)*logoRadius;
+        const y1 = centerY + Math.sin(angle)*logoRadius;
+        const x2 = centerX + Math.cos(angle)*(logoRadius+spike);
+        const y2 = centerY + Math.sin(angle)*(logoRadius+spike);
 
-  const time = Date.now()*0.02;
+        const hue = (i*360/actualBars + hueShift)%360;
+        ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+        ctx.lineWidth = 0.35;
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(x2,y2);
+        ctx.stroke();
+    }
 
-  for(let i=0;i<2000;i++){
-
-    const angle = (i/2000)*Math.PI*2;
-    const idx = Math.floor((i/2000)*400);
-
-    const spike = (smoothArray[idx]/255)*120;
-
-    const x1 = cx + Math.cos(angle)*radius;
-    const y1 = cy + Math.sin(angle)*radius;
-
-    const x2 = cx + Math.cos(angle)*(radius+spike);
-    const y2 = cy + Math.sin(angle)*(radius+spike);
-
-    ctx.strokeStyle = `hsl(${(i*360/2000 + time)%360},100%,55%)`;
-    ctx.lineWidth = 0.35;
-
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
-    ctx.stroke();
-  }
+    if(logo.complete){
+        const size = logoRadius*2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX,centerY,logoRadius,0,Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(logo,centerX-logoRadius,centerY-logoRadius,size,size);
+        ctx.restore();
+    }
 }
 
 draw();
-
 </script>
 </body>
 </html>
